@@ -118,13 +118,22 @@
   }
 
   /** What omp does once its ask timeout (ms) runs out, or null when there
-   *  is none: it picks the recommended options when every question has one,
-   *  and otherwise answers on its own. */
+   * is none: it picks the recommended options when every question has one,
+   * and otherwise answers on its own. The note is the desktop's own text,
+   * so it follows the interface language; only the duration label, with
+   * its units, stays as timeoutLabel wrote it. */
   function timeoutNote(questions, ms) {
     const after = timeoutLabel(ms);
     if (!after) return null;
-    if (!questions.every(q => q.recommended !== null)) return `omp answers for you after ${after}`;
-    return `omp picks the recommended option${questions.length > 1 ? "s" : ""} after ${after}`;
+    if (!questions.every(q => q.recommended !== null)) {
+      return window.OMP_I18N.t("omp answers for you after {after}", { after });
+    }
+    return window.OMP_I18N.plural(
+      questions.length,
+      "omp picks the recommended option after {after}",
+      "omp picks the recommended options after {after}",
+      { after },
+    );
   }
 
   /** `text` split into plain runs and `code` runs (a backtick pair). Option

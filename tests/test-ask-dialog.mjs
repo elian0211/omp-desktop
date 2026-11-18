@@ -11,8 +11,11 @@ import { dirname, join } from "node:path";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const win  = {};
-// eslint-disable-next-line no-new-func
-new Function("window", readFileSync(join(root, "src/app/ask-dialog.js"), "utf8"))(win);
+// app/i18n.js translates the timeout notes (English without a dictionary).
+for (const f of ["src/app/i18n.js", "src/app/ask-dialog.js"]) {
+  // eslint-disable-next-line no-new-func
+  new Function("window", readFileSync(join(root, f), "utf8"))(win);
+}
 const A = win.OMP_ASK_DIALOG;
 
 let passed = 0;

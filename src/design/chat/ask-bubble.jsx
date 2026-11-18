@@ -19,6 +19,13 @@ function AskBubble({ msg, idx, highlighted, onAnswer, onAnswerDialog, onConfirm,
   const method = msg.method ?? "select";
   const approval = method === "select" ? _AskApprovalInfo(msg) : null;
   const tool = approval?.tool ?? null;
+  // The approval head and its two option labels are omp's text, but their
+  // grammar is desktop-recognized (app/approval.js mirrors Rust's), so the
+  // card shows them in the interface language. Display-only: submit(opt)
+  // below still answers with omp's exact label, and a head whose tool name
+  // failed the grammar, or an option omp renamed, falls back to omp's raw
+  // text (an unmatched key passes through OMP_TR unchanged).
+  const approvalTitle = tool != null ? OMP_TR("Allow tool: {name}", { name: tool }) : null;
   // omp's ask dialog while it waits: question count and omp's timeout.
   const dialogOpen = method === "ask" && !done;
   const timeoutNote = dialogOpen ? _AskDialogRules.timeoutNote(msg.questions, msg.timeout) : null;
@@ -137,7 +144,7 @@ function AskBubble({ msg, idx, highlighted, onAnswer, onAnswerDialog, onConfirm,
     // select (default — also covers any legacy message without a `method`)
     body = (
       <>
-        <div className="ask-question">{approval ? approval.head : msg.title}</div>
+        <div className="ask-question">{approvalTitle ?? (approval ? approval.head : msg.title)}</div>
 
         {/* Detail lines omp appends to the title (origin/reason, path,
             command, content preview). Capped + scrollable in CSS so a
@@ -159,7 +166,7 @@ function AskBubble({ msg, idx, highlighted, onAnswer, onAnswerDialog, onConfirm,
                   onClick={() => submit(opt)}
                 >
                   {isSelected && <_AskIcon name="check" size={10} color="var(--accent)" />}
-                  {opt}
+                  {approval ? OMP_TR(opt) : opt}
                 </button>
               );
             })}
