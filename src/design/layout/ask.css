@@ -91,12 +91,6 @@
 .ask-opt.dimmed { opacity: 0.3; }
 .ask-opt:disabled { cursor: default; }
 
-.ask-approval-rules {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
 .ask-opt.ask-remember {
   font-size: var(--d-text-xs);
   color: var(--fg-3);

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - The browser panel has its own close button again, at the right end of its control bar. The toolbar's browser toggle still closes it too.
+- A tool-approval prompt card's four buttons (Approve/Deny and the two remember offers) sit on one wrapping line instead of two rows.
 - A tool-approval prompt card follows the interface language: its "Allow tool: …" head and the Approve/Deny buttons translate display-only (the answer still carries omp's exact option label), and the ask dialog's timeout notes translate too. The detail lines (command, path, content preview) stay as omp wrote them.
 
 ## [0.15.0] - 2026-11-14

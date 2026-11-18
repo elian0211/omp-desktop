@@ -170,20 +170,22 @@ function AskBubble({ msg, idx, highlighted, onAnswer, onAnswerDialog, onConfirm,
                 </button>
               );
             })}
-          </div>
-        )}
-
-        {tool && !done && (
-          <div className="ask-approval-rules">
-            <button className="ask-opt ask-remember" onClick={() => grant("session")}>
-              <_AskIcon name="clock" size={10} />
-              {OMP_TR("Allow for this session")}
-            </button>
-            {hasProjectPath && (
-              <button className="ask-opt ask-remember" onClick={() => grant("project")}>
-                <_AskIcon name="folder" size={10} />
-                {OMP_TR("Always allow in this project")}
-              </button>
+            {/* The grant buttons sit in the options row itself: one line for
+                the whole answer, omp's options beside the desktop's
+                remember-for-later offers. */}
+            {tool && !done && (
+              <>
+                <button className="ask-opt ask-remember" onClick={() => grant("session")}>
+                  <_AskIcon name="clock" size={10} />
+                  {OMP_TR("Allow for this session")}
+                </button>
+                {hasProjectPath && (
+                  <button className="ask-opt ask-remember" onClick={() => grant("project")}>
+                    <_AskIcon name="folder" size={10} />
+                    {OMP_TR("Always allow in this project")}
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
