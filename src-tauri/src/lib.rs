@@ -937,6 +937,28 @@ async fn project_file_read(
     off_ipc(move || project_file::read(&root, &path)).await?
 }
 
+/// Reveal a file of the tab's project in the OS file manager (the files
+/// panel's context menu) — see `project_file::reveal_target` and
+/// `external_open::reveal_file`. Same trust shape as `project_file_read`:
+/// the folder is the one `start_session` registered for the tab, never one
+/// sent by the webview. `async` + `spawn_blocking` keeps the canonicalise
+/// and the launcher start off Tauri's main command thread.
+#[tauri::command]
+async fn project_file_reveal(
+    session_id: String,
+    path: String,
+    terminal: State<'_, Arc<terminal::TerminalManager>>,
+) -> Result<(), String> {
+    let root = terminal
+        .folder(&session_id)
+        .ok_or_else(|| "this tab has no project folder".to_owned())?;
+    off_ipc(move || {
+        project_file::reveal_target(&root, &path)
+            .and_then(|target| external_open::reveal_file(&target))
+    })
+    .await?
+}
+
 /// Stage a file's changes — see `workspace::accept`.
 ///
 /// Runs `async` + `spawn_blocking`: `workspace::accept` shells out to
@@ -1607,6 +1629,7 @@ pub fn run() {
             git_browser_commit,
             git_browser_commit_file,
             project_file_read,
+            project_file_reveal,
             pr_automation::pr_automation_snapshot,
             workspace_accept,
             workspace_reject,

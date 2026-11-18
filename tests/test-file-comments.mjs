@@ -190,4 +190,19 @@ check("searchRoot: the search's file hits flat under their whole path; folders l
   assert.deepEqual(F.searchRoot(null).children, []);
 });
 
+check("clampMenu: a menu fitting the viewport stays at the click", () => {
+  assert.deepEqual(F.clampMenu(100, 200, 180, 90, 1000, 800), { x: 100, y: 200 });
+});
+
+check("clampMenu: an edge that would clip aligns the menu inside it", () => {
+  assert.deepEqual(F.clampMenu(900, 740, 180, 90, 1000, 800), { x: 820, y: 710 });
+  // The click itself beyond the edge (a maximised menu corner): the menu
+  // still lands fully inside, never negative.
+  assert.deepEqual(F.clampMenu(995, 795, 180, 90, 1000, 800), { x: 820, y: 710 });
+});
+
+check("clampMenu: a viewport smaller than the menu pins it at 0", () => {
+  assert.deepEqual(F.clampMenu(50, 50, 1800, 900, 1000, 800), { x: 0, y: 0 });
+});
+
 console.log(`test-file-comments: ${passed} checks passed`);

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- The files panel's file rows have a right-click menu: reference the file into the composer (`@path`, appended with the whitespace context omp's mention parsing wants), copy the project-relative path, or reveal the file in the OS file manager (`explorer /select` on Windows, `open -R` on macOS, the folder on Linux). A row git marks deleted takes only Copy; a failed reveal stays open and shows the reason.
+
 ### Changed
 
 - The browser panel has its own close button again, at the right end of its control bar. The toolbar's browser toggle still closes it too.

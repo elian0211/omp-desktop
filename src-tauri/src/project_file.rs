@@ -10,7 +10,7 @@
 //! of it is refused, not followed. Plain file reads — no git, no filters.
 
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
@@ -150,9 +150,79 @@ pub fn read(root: &Path, path: &str) -> Result<FilePreview, String> {
     })
 }
 
+/// What [`reveal_target`] resolved for the OS file manager to open: the
+/// folder to open, and the entry to select inside it (`None` when only a
+/// folder can be named — the file itself is gone).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RevealTarget {
+    pub folder: PathBuf,
+    pub file: Option<PathBuf>,
+}
+
+/// Resolve `path` (project-relative, or absolute inside `root`) for "reveal
+/// in the file manager": the same guards as [`read`] (traversal, `.git`, a
+/// symlink escaping the project), then the resolved entry and the folder to
+/// open around it. A path that no longer exists falls back to the nearest
+/// existing ancestor folder inside the project — a stale tree row still
+/// reveals where its file was — with nothing to select inside it.
+pub fn reveal_target(root: &Path, path: &str) -> Result<RevealTarget, String> {
+    let rel = crate::git_browser::project_relative(root, path)?;
+    let canonical_root =
+        std::fs::canonicalize(root).map_err(|e| format!("failed to resolve project: {e}"))?;
+    match std::fs::canonicalize(canonical_root.join(&rel)) {
+        Ok(entry) => {
+            let outside = entry.strip_prefix(&canonical_root).map_or(true, |inside| {
+                inside
+                    .components()
+                    .any(|c| c.as_os_str().eq_ignore_ascii_case(".git"))
+            });
+            if outside {
+                return Err(format!("{rel} resolves outside this tab's project"));
+            }
+            if entry == canonical_root {
+                // The request collapsed onto the project folder itself:
+                // open it, nothing to select.
+                return Ok(RevealTarget {
+                    folder: canonical_root,
+                    file: None,
+                });
+            }
+            Ok(RevealTarget {
+                // A canonicalised absolute path always has a parent.
+                folder: entry.parent().map_or(canonical_root, Path::to_path_buf),
+                file: Some(entry),
+            })
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(RevealTarget {
+            folder: reveal_missing(&canonical_root, &rel),
+            file: None,
+        }),
+        Err(e) => Err(format!("failed to resolve {rel}: {e}")),
+    }
+}
+
+/// The nearest existing ancestor folder of the missing `rel` inside an
+/// already-canonicalised `root` — [`reveal_target`]'s fallback for a path
+/// the work tree no longer has.
+fn reveal_missing(root: &Path, rel: &str) -> PathBuf {
+    let mut folder = root.to_path_buf();
+    let mut dir = root.join(rel).parent().map(Path::to_path_buf);
+    while let Some(candidate) = dir {
+        if !candidate.starts_with(root) {
+            break;
+        }
+        if candidate.is_dir() {
+            folder = candidate;
+            break;
+        }
+        dir = candidate.parent().map(Path::to_path_buf);
+    }
+    folder
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{read, PreviewKind, MAX_IMAGE_BYTES, MAX_TEXT_BYTES};
+    use super::{read, reveal_target, PreviewKind, RevealTarget, MAX_IMAGE_BYTES, MAX_TEXT_BYTES};
     use crate::test_support::TempDir;
     use std::fs;
 
@@ -276,6 +346,52 @@ mod tests {
             read(dir.path(), "src").is_err(),
             "a directory is not previewable"
         );
+    }
+
+    #[test]
+    fn reveal_resolves_the_file_and_its_parent_folder() {
+        let dir = project("reveal");
+        fs::write(dir.path().join("src/a.rs"), "fn main() {}\n").unwrap();
+        let target = reveal_target(dir.path(), "src/a.rs").unwrap();
+        let file = dir.path().join("src/a.rs").canonicalize().unwrap();
+        assert_eq!(target.file.as_deref(), Some(file.as_path()));
+        assert_eq!(target.folder, file.parent().unwrap());
+    }
+
+    #[test]
+    fn reveal_of_a_gone_file_falls_back_to_the_nearest_existing_ancestor() {
+        let dir = project("reveal-missing");
+        fs::create_dir_all(dir.path().join("src")).unwrap();
+        // The file is gone but its folder survives: the folder is revealed,
+        // with nothing to select.
+        let target = reveal_target(dir.path(), "src/renamed-away.rs").unwrap();
+        assert_eq!(target.file, None);
+        assert_eq!(
+            target.folder,
+            dir.path().join("src").canonicalize().unwrap()
+        );
+        // Every ancestor gone too: the project folder.
+        let target = reveal_target(dir.path(), "deep/tree/leaf.rs").unwrap();
+        let RevealTarget { file, folder } = target;
+        assert_eq!((file, folder), (None, dir.path().canonicalize().unwrap()));
+    }
+
+    #[test]
+    fn reveal_refuses_what_the_preview_refuses() {
+        let dir = project("reveal-escape");
+        let outside = TempDir::new("project-file", "reveal-escape-outside");
+        fs::write(outside.path().join("secret.txt"), "s").unwrap();
+        assert!(reveal_target(dir.path(), "../reveal-escape-outside/secret.txt").is_err());
+        assert!(reveal_target(dir.path(), ".git/config").is_err());
+        fs::create_dir_all(dir.path().join(".git")).unwrap();
+        fs::write(dir.path().join(".git/config"), "[remote]").unwrap();
+        if !symlink(&outside.path().join("secret.txt"), &dir.path().join("link")) {
+            eprintln!("skipped: symlinks not permitted here");
+            return;
+        }
+        // Unlike the preview, which reports Outside as a state, a reveal has
+        // nothing sane to open: the escape is a hard error.
+        assert!(reveal_target(dir.path(), "link").is_err());
     }
 
     /// A file symlink; `false` where the OS refuses one (Windows without

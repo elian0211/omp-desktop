@@ -4351,6 +4351,15 @@
       return _invokeResult("project_file_read", { sessionId: activeSessionId, path });
     },
 
+    /** Reveal a file of the active tab's project in the OS file manager
+     *  (the files panel's context menu): same `{ok, value | error}` shape
+     *  and same trust shape — Rust takes the folder from the tab, so only
+     *  the tab id and the project-relative path cross. null with no tab. */
+    revealProjectFile(path) {
+      if (!activeSessionId) return Promise.resolve(null);
+      return _invokeResult("project_file_reveal", { sessionId: activeSessionId, path });
+    },
+
     /** Stage a file's changes (`git add`). */
     async workspaceAccept(relPath) {
       const path = _activeProjectPath();

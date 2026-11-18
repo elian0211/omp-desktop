@@ -76,6 +76,29 @@
 .fc-pop .btn { height: 22px; font-size: var(--d-text-xs); }
 .fc-pop .btn.fc-pop-explain { color: var(--cyan); }
 
+/* The file row's right-click menu (files-panel.jsx _FCP_Menu): fixed to the
+   viewport (the click's coordinates), clamped once its size is known. */
+.fc-menu {
+  position: fixed; z-index: 60;
+  min-width: 168px; padding: 3px;
+  background: var(--bg-elevated); border: 1px solid var(--line-bright); border-radius: var(--r-2);
+  box-shadow: var(--shadow-pop);
+  font-family: var(--font-sans); white-space: nowrap;
+}
+.fc-menu-item {
+  display: flex; align-items: center; gap: 7px;
+  width: 100%; height: 26px; padding: 0 9px; border: 0; border-radius: var(--r-2);
+  background: none; color: var(--fg); font: var(--d-text-sm)/1 var(--font-sans); text-align: left;
+  cursor: pointer;
+}
+.fc-menu-item:hover:not(:disabled) { background: color-mix(in oklab, var(--fg) 8%, transparent); }
+.fc-menu-item:disabled { color: var(--fg-4); cursor: default; }
+.fc-menu-item svg { flex: none; color: var(--fg-3); }
+.fc-menu-err {
+  max-width: 260px; padding: 5px 9px 3px;
+  font-size: var(--d-text-xs); color: var(--rose); white-space: normal; overflow-wrap: anywhere;
+}
+
 /* A mark's card under its last line; sans text inside the mono rows. */
 .fc-card {
   margin: 4px 16px 6px 70px; padding: 6px 8px 7px 10px; max-width: 560px;

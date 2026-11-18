@@ -30,6 +30,8 @@ use std::path::Path;
 use std::sync::Mutex;
 use tauri::{AppHandle, Emitter, Manager, Url};
 
+use crate::project_file::RevealTarget;
+
 /// Payload-free wake-up for the frontend: the queue, not the event, carries
 /// the requests (see the module docs).
 pub const OPEN_PROJECT_EVENT: &str = "open://project";
@@ -203,6 +205,70 @@ fn strip_verbatim(mut path: String) -> String {
 fn has_drive_prefix(path: &str) -> bool {
     let mut chars = path.chars();
     matches!((chars.next(), chars.next()), (Some(c), Some(':')) if c.is_ascii_alphabetic())
+}
+
+/// Hand one resolved project entry to the OS file manager ([`crate::
+/// project_file::reveal_target`]): the entry is selected in its parent when
+/// it exists (Windows `explorer /select`, macOS `open -R`), the folder opens
+/// alone on Linux, which has no select-verb to ask for. Fire-and-forget:
+/// `explorer` and `/usr/bin/open` return at once and Linux's
+/// `open::that_detached` double-forks, so the launch never blocks the IPC
+/// thread, and no supervisor attaches — a supervisor's job object would end
+/// the file manager with this app.
+pub fn reveal_file(target: &RevealTarget) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    return reveal_windows(target);
+    #[cfg(target_os = "macos")]
+    return reveal_macos(target);
+    #[cfg(all(unix, not(target_os = "macos")))]
+    return reveal_linux(target);
+    #[cfg(not(any(
+        target_os = "windows",
+        target_os = "macos",
+        all(unix, not(target_os = "macos")),
+    )))]
+    Err("this platform has no supported file manager".to_owned())
+}
+
+/// The entry the file manager should point at: the file when it exists, the
+/// folder it (or its nearest surviving ancestor) lives in otherwise.
+#[cfg(any(target_os = "windows", target_os = "macos"))]
+fn selected_entry(target: &RevealTarget) -> std::path::PathBuf {
+    target.file.clone().unwrap_or_else(|| target.folder.clone())
+}
+
+#[cfg(target_os = "windows")]
+fn reveal_windows(target: &RevealTarget) -> Result<(), String> {
+    // Explorer lives in a fixed system folder, never on a searched PATH:
+    // resolve it from SystemRoot instead of by name, so a tampered PATH
+    // (or a project folder's contents) cannot choose the binary.
+    let system_root =
+        std::env::var_os("SystemRoot").ok_or_else(|| "SystemRoot not set".to_owned())?;
+    let mut cmd =
+        std::process::Command::new(std::path::Path::new(&system_root).join("explorer.exe"));
+    // Explorer mishandles the verbatim (`\\?\`) prefix `canonicalize` adds:
+    // strip it like every other consumer of a canonical path in this app.
+    let selected = strip_verbatim(selected_entry(target).to_string_lossy().into_owned());
+    cmd.arg(format!("/select,{selected}"));
+    let _gate = crate::spawn_gate::shared();
+    crate::spawn_gate::spawn(&mut cmd).map_err(|e| format!("failed to open explorer: {e}"))?;
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn reveal_macos(target: &RevealTarget) -> Result<(), String> {
+    let mut cmd = std::process::Command::new("/usr/bin/open");
+    cmd.arg("-R").arg(selected_entry(target));
+    let _gate = crate::spawn_gate::shared();
+    crate::spawn_gate::spawn(&mut cmd).map_err(|e| format!("failed to open finder: {e}"))?;
+    Ok(())
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn reveal_linux(target: &RevealTarget) -> Result<(), String> {
+    let _gate = crate::spawn_gate::shared();
+    #[allow(clippy::disallowed_methods)] // under the gate, like open_external
+    open::that_detached(&target.folder).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

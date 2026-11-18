@@ -1169,7 +1169,9 @@ function App() {
               {side === "browser" ? (
                 <BrowserDock ui={browser} stageRef={stageRef} room={panes.browserRoom} />
               ) : side === "files" ? (
-                <FilesPanel key={planKey} ui={files} canSendNow={!goalUi.mode} onSendNow={() => handleSend("", [])} onOpenGit={handleOpenFile} />
+                <FilesPanel key={planKey} ui={files} canSendNow={!goalUi.mode} onSendNow={() => handleSend("", [])} onOpenGit={handleOpenFile}
+                  onReference={path => setPromptInsert({ text: "@" + path, append: true, sessionId: planKey, nonce: Date.now() })}
+                  onReveal={path => bridge.revealProjectFile(path)} />
               ) : side === "tree" ? (
                 <ConversationTree
                   model={convTree.model} currentFile={convTree.currentFile} error={convTree.error}

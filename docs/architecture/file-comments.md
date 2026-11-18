@@ -5,11 +5,12 @@ A panel in the side column (beside the chat, where the rail, the conversation tr
 ## Layout and entry points
 
 - Toolbar button (`file` icon) and `desktop.files.toggle` ("Toggle files panel", default `Ctrl+Shift+M`, `Shift+Cmd+M` on macOS, rebindable, `fromGuest`). Open, the toolbar shows a full-view toggle beside it (`.stage.files-full` hides every other stage column, as the browser's full view does; leaving the panel leaves full view).
+- Right-click on a file row in the tree (tree or searched flat alike) opens the panel's context menu: **Reference in composer** (appends `@path` to that tab's composer draft through the composer's `promptInsert` append channel — a space before the `@` and one after are `OMP_WIDGETS.appendToDraft`'s, which is exactly the whitespace context omp's mention parsing wants; the targeted `sessionId` lands it in the right tab even if the user switched away), **Copy path** (the project-relative path, like the file bar's copy), and **Reveal in file manager** (`project_file_reveal`: the tab folder from the registry like `project_file_read`, the same project-relative guards, then `external_open::reveal_file` — Windows `explorer /select`, macOS `open -R`, Linux the folder). A row git marks deleted takes only Copy. A failed reveal stays open and shows the reason.
 - File preview header: "Comment in files panel" (text files only) closes the preview and opens the panel on that file, the preview's range picked.
 - Alt-click on a project file link in an agent reply (`OMP_FILE_PREVIEW.linkClick` → `files`; Ctrl/⌘ still wins for the git browser).
 - A composer chip click opens the panel on that mark's file and lines.
 
-The panel is `side === "files"` in `app-live.jsx`'s per-tab side map, a resizable pane (`OMP_LAYOUT_WIDTHS.PANES.files`, tweak `filesWidth`, Settings → Layout → Column widths) like the conversation tree. Left: the git browser's files pane (`GitFileTree`, unchanged apart from four optional props), hideable per tab from the file bar. Right: the file bar (tree toggle, path, line count, truncated chip, reload, open in the git browser, copy path), the code, and a footer with the tab's counts, "clear all" and "send now".
+The panel is `side === "files"` in `app-live.jsx`'s per-tab side map, a resizable pane (`OMP_LAYOUT_WIDTHS.PANES.files`, tweak `filesWidth`, Settings → Layout → Column widths) like the conversation tree. Left: the git browser's files pane (`GitFileTree`, unchanged apart from five optional props), hideable per tab from the file bar. Right: the file bar (tree toggle, path, line count, truncated chip, reload, open in the git browser, copy path), the code, and a footer with the tab's counts, "clear all" and "send now".
 
 ## Files and the tree (`app/use-file-comments.jsx`)
 

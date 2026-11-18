@@ -6,11 +6,13 @@
    set is the full tree's). Row logic is app/git-browser.js
    (OMP_GIT_BROWSER).
 
-   The files panel (design/files/) mounts it too, with four optional props:
+   The files panel (design/files/) mounts it too, with five optional props:
    `badges` (Map path → count, a number after the file's name),
    `commented` ({ count, on, onToggle }: a second head toggle), `searched`
-   (the root already holds the filter's hits: listed flat, unfiltered) and
-   `emptyText` (the message for an empty list). */
+   (the root already holds the filter's hits: listed flat, unfiltered),
+   `emptyText` (the message for an empty list) and `onFileContext` (node,
+   event: a file row's right click; the git browser passes none, so it
+   keeps the native menu). */
 
 const { Icon: _GT_Icon } = window;
 const { flatten: _GT_flatten, filterFiles: _GT_filterFiles } = window.OMP_GIT_BROWSER;
@@ -25,7 +27,7 @@ const GIT_STATUS_META = {
 
 function GitFileTree({
   root, error, expanded, onToggle, selected, onSelect, changedOnly, onChangedOnly,
-  filter, onFilter, changedCount, commit, truncated, badges, commented, searched = false, emptyText,
+  filter, onFilter, changedCount, commit, truncated, badges, commented, searched = false, emptyText, onFileContext,
 }) {
   const rows = React.useMemo(() => {
     if (searched) return (root?.children ?? []).map(node => ({ node, depth: 0, flat: true }));
@@ -86,6 +88,11 @@ function GitFileTree({
               onClick={() => {
                 if (!node.dir) onSelect(node.path);
                 else if (!changedOnly) onToggle(node.path);
+              }}
+              onContextMenu={(e) => {
+                if (node.dir || !onFileContext) return;
+                e.preventDefault();
+                onFileContext(node, e);
               }}>
               {node.dir
                 ? <_GT_Icon name={changedOnly || expanded.has(node.path) ? "chev" : "chevR"} size={11} color="var(--fg-4)" />

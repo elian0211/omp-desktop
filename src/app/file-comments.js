@@ -203,10 +203,22 @@
     return { name: "", path: "", dir: true, status: null, changed: 0, children };
   }
 
+  /** The file panel's context menu clamped into the viewport: `x`/`y` are
+   *  the right-click position, `w`/`h` the menu's measured size. A menu an
+   *  edge would clip opens inside that edge (aligned to it, at `0` if the
+   *  viewport is smaller than the menu) — the native menu's behaviour. */
+  function clampMenu(x, y, w, h, vw, vh) {
+    const clamp = (at, size, total) => {
+      if (at + size > total && total > 0) return Math.max(0, total - size);
+      return at;
+    };
+    return { x: clamp(x, w, vw), y: clamp(y, h, vh) };
+  }
+
   window.OMP_FILE_COMMENTS = {
     SELECTION_MAX, HEADER, EXPLAIN,
     marksOf, addMark, updateMark, removeMarks, restoreMarks,
     location, selectionText, inlineCode, markText, mergeIntoMessage, chipLabel,
-    isStale, counts, relativeTo, folderTree, onlyFiles, searchRoot,
+    isStale, counts, relativeTo, folderTree, onlyFiles, searchRoot, clampMenu,
   };
 })();
