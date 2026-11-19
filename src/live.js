@@ -3974,6 +3974,18 @@
     setGoalContinuation(profile, enabled) {
       return _invokeResult("goal_continuation_set", { profile, enabled });
     },
+    /** omp's Intelligence settings + model roles for `profile`
+     *  (src-tauri omp_native_config.rs): `{ok, value}` with the
+     *  snapshot, or `{ok: false, error}` with omp's reason. */
+    intelligenceSettings(profile) {
+      return _invokeResult("intelligence_settings_get", { profile });
+    },
+    /** Patches fields of it (app/intelligence.js `rowPatch` shapes; Rust
+     *  merges field-wise) and returns the re-read snapshot. Same result
+     *  shape. */
+    setIntelligenceSettings(profile, patch) {
+      return _invokeResult("intelligence_settings_set", { profile, patch });
+    },
     /** Manual rename from the tab bar or sidebar (#32): omp's own
      *  `/rename <title>` builtin, so the name is stored as user-set and
      *  survives resume, and — exactly like a typed `/rename` — retires

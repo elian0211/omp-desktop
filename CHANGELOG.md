@@ -8,10 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Settings → Intelligence: omp's per-profile Intelligence settings move into the desktop — compaction details (mid-turn, continue-after, method order), memory (backend, Mnemopi scope and auto-recall/retain), autolearn, retry details (attempts, model fallback) and the model-role editor (including `advisor`), read and written through allowlisted `omp config` keys (`intelligence_settings_get`/`_set`) so desktop-owned toggles (auto-compaction, auto-retry, approval mode, thinking) stay the only source of theirs. Details that only apply while the desktop's own toggles are on say so.
 - The files panel's file rows have a right-click menu: reference the file into the composer (`@path`, appended with the whitespace context omp's mention parsing wants), copy the project-relative path, or reveal the file in the OS file manager (`explorer /select` on Windows, `open -R` on macOS, the folder on Linux). A row git marks deleted takes only Copy; a failed reveal stays open and shows the reason.
 
 ### Changed
 
+- Settings → Agent and Settings → Intelligence are one section again: the Agent section now holds profiles, goals, and — with their desktop toggles in the same group — compaction (auto-compact plus mid-turn, continue-after, order), memory, autolearn, retries (retry toggle plus attempts and fallback model) and model roles. The Intelligence section is gone.
 - The browser panel has its own close button again, at the right end of its control bar. The toolbar's browser toggle still closes it too.
 - A tool-approval prompt card's four buttons (Approve/Deny and the two remember offers) sit on one wrapping line instead of two rows.
 - A tool-approval prompt card follows the interface language: its "Allow tool: …" head and the Approve/Deny buttons translate display-only (the answer still carries omp's exact option label), and the ask dialog's timeout notes translate too. The detail lines (command, path, content preview) stay as omp wrote them.

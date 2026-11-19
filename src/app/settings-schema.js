@@ -155,16 +155,36 @@
         tweak("browserLocalhostInPanel", "toggle", "Open localhost links in the panel", "A click on a `localhost` link in the chat opens it here instead of your system browser.", "dev server url"),
       ] },
     ] },
-    { id: "agent", icon: "agent", title: "Agent", blurb: "Which omp profile new tabs use and how omp behaves in them.", groups: [
+    { id: "agent", icon: "agent", title: "Agent", blurb: "Which omp profile new tabs use, how omp behaves in them, its memory, autolearn, compaction and retry details, and which model each role runs. Details are saved in omp's config of the active profile.", groups: [
       { name: "Profiles", src: "profiles.json", rows: [
         custom("startupProfile", "Startup profile", "The profile of the tab opened at launch and of new tabs. Profiles are created and renamed from the profile menu.", "profile account"),
       ] },
       { name: "Goals", src: "omp config", rows: [
         custom("goalContinue", "Keep working on a goal", "omp continues an active goal on its own after each turn instead of waiting for you. Costs tokens while unattended.", "goal auto continue"),
       ] },
-      { name: "omp behaviour", rows: [
+      { name: "Compaction", rows: [
         tweak("autoCompaction", "toggle", "Auto-compact context", "omp summarises older turns when the context fills up. Off: you run `/compact` yourself.", "compaction context window"),
+        custom("compactionMid", "Mid-turn compaction", "Lets omp compact mid-turn too when auto-compaction is on. With it off, compaction waits for the turn to end.", "compaction mid turn context window"),
+        custom("compactionContinue", "Continue after compaction", "omp keeps working through an active goal after it compacted. Applies while auto-compaction is on.", "compaction continue goal"),
+        custom("compactionOrder", "Compaction order", "The methods omp tries, first first. Applies while auto-compaction is on.", "method order remote snapcompact handoff soft shake"),
+      ] },
+      { name: "Memory", src: "omp config", rows: [
+        custom("memoryBackend", "Memory", "What omp remembers across sessions: `off`, its `local` store, Mnemopi or Hindsight.", "memory mnemopi hindsight remember long term"),
+        custom("memoryScope", "Memory scope", "How Mnemopi scopes what it recalls: everything, or only the current project (optionally tagged).", "scope project global tagged"),
+        custom("memoryRecall", "Auto-recall", "Mnemopi recalls relevant memories with each turn.", "recall retrieve search"),
+        custom("memoryRetain", "Auto-retain", "Mnemopi keeps durable facts from the conversation on its own.", "retain store save"),
+      ] },
+      { name: "Autolearn", src: "omp config", rows: [
+        custom("autolearn", "Autolearn", "omp distils reusable knowledge from finished work.", "autolearn learn knowledge"),
+        custom("autolearnContinue", "Continue autolearn", "A learned lesson is followed up on its own instead of waiting for you.", "autolearn continue"),
+      ] },
+      { name: "Retries", rows: [
         tweak("autoRetry", "toggle", "Retry failed requests", "omp retries a request the provider refused or dropped, with a retry row you can stop.", "retry error rate limit"),
+        custom("retries", "Retry attempts", "How often omp retries a request the provider refused or dropped. Applies while retry failed requests is on.", "retry attempts rate limit"),
+        custom("modelFallback", "Fallback model on retry", "The last retries may run a fallback model when the main one keeps failing. Applies while retry failed requests is on.", "retry fallback model"),
+      ] },
+      { name: "Model roles", src: "omp config", rows: [
+        custom("modelRoles", "Model roles", "Which model each role runs, as `provider/model`. Leave a role empty to keep omp's own choice.", "model roles advisor smol vision plan designer commit tiny task"),
       ] },
     ] },
     { id: "session", icon: "clock", title: "Session", blurb: "Tabs across restarts, closing, naming and app updates.", groups: [

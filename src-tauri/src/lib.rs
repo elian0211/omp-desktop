@@ -22,6 +22,7 @@ mod git_browser;
 mod git_watcher;
 mod goal_config;
 mod json_store;
+mod omp_native_config;
 mod keybindings;
 mod model_usage;
 mod navigation_guard;
@@ -1108,6 +1109,30 @@ async fn goal_continuation_set(
     off_ipc(move || goal_config::set(profile.as_deref(), enabled)).await?
 }
 
+/// omp's Intelligence settings + model roles for `profile` (memory,
+/// compaction details, retry details — not the desktop RPC toggles for
+/// compaction/retry enabled). See `omp_native_config`.
+#[tauri::command]
+async fn intelligence_settings_get(
+    profile: Option<String>,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+) -> Result<omp_native_config::IntelligenceSettings, String> {
+    let profile = store.resolve_owned(profile)?;
+    off_ipc(move || omp_native_config::get(profile.as_deref())).await?
+}
+
+/// Patch omp's Intelligence settings / model roles for `profile` and return
+/// the re-read snapshot. Only fields present in `patch` are written.
+#[tauri::command]
+async fn intelligence_settings_set(
+    profile: Option<String>,
+    patch: omp_native_config::IntelligencePatch,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+) -> Result<omp_native_config::IntelligenceSettings, String> {
+    let profile = store.resolve_owned(profile)?;
+    off_ipc(move || omp_native_config::set(profile.as_deref(), patch)).await?
+}
+
 /// Shared profile-resolution and home-dir setup for the three keybindings
 /// commands. Returns `(home, resolved_profile, env_dir)` ready to pass to
 /// `keybindings::payload` / `keybindings::payload_with_overlay`.
@@ -1644,6 +1669,8 @@ pub fn run() {
             usage_stats,
             goal_continuation_get,
             goal_continuation_set,
+            intelligence_settings_get,
+            intelligence_settings_set,
             list_project_files,
             list_profiles,
             create_profile,
