@@ -20,7 +20,7 @@ const {
 // Per pane: its tweak, the handle's label and the side of the pane the
 // handle sits on.
 const _PW_UI = {
-  sidebar: { tweak: "sidebarWidth", label: "resize project sidebar", edge: "right" },
+  sidebar: { tweak: "sidebarWidth", label: "resize side panel", edge: "right" },
   split: { tweak: "splitWidth", label: "resize subagent pane", edge: "left" },
   rail: { tweak: "railWidth", label: "resize ambient rail", edge: "left" },
   tree: { tweak: "treeWidth", label: "resize conversation tree", edge: "left" },

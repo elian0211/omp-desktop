@@ -194,7 +194,7 @@
     { name: "handoff",   hint: "package the session for a teammate",        icon: "⇲", group: "Session" },
     { name: "model",     hint: "switch model · ⇧⌘M",                         icon: "◉", group: "Agent" },
     { name: "thinking",  hint: "cycle thinking level",                      icon: "✶", group: "Agent" },
-    { name: "todo",      hint: "open the kanban surface",                   icon: "▦", group: "View" },
+    { name: "todo",      hint: "expand the plan above the composer",        icon: "▦", group: "View" },
     { name: "minimap",   hint: "toggle the session minimap",                icon: "▢", group: "View" },
     { name: "export",    hint: "export this session to HTML",               icon: "⇪", group: "View" },
   ];

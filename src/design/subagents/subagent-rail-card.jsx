@@ -1,5 +1,5 @@
-/* subagents/subagent-rail-card.jsx — ambient summary of this session's
-   subagents for the right rail (AmbientRail, between radar and minimap).
+/* subagents/subagent-rail-card.jsx — the ambient subagents summary; the
+   Session activity view (design/side-views/session-view.jsx) mounts it.
    Live agents first, then the most recent finished ones; a click opens the
    manager pane on that agent. */
 

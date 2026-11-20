@@ -6,7 +6,7 @@
    - Ambient rail: TokenGauge, ActivityRadar, subagents card, Minimap
    ═════════════════════════════════════════════════════════════════════ */
 
-const { Icon, TokenGauge, ActivityRadar, Sparkline, TOOL_META, DEFAULT_PROFILE_ID, SubagentRailCard, TabGroupChip, TabRunDot, TabLabel, RenameField, BranchMenu } = window;
+const { Icon, TokenGauge, ActivityRadar, Sparkline, TOOL_META, DEFAULT_PROFILE_ID, TabGroupChip, BranchMenu } = window;
 const { groupTabs } = window.OMP_PROJECT_NAV;
 
 // Thin wrappers around the shared `OMP_KEYMAP.hintFor`/`hintKeyFor` — same
@@ -91,57 +91,25 @@ function TabBar({
   // profile list has loaded.
   const profileLabel = id =>
     id === DEFAULT_PROFILE_ID ? null : (profiles.find(p => p.id === id)?.name ?? id);
-  // Tab whose name is being edited inline (#32); double-click enters it.
-  const [renaming, setRenaming] = React.useState(null);
   // Drag to reorder (#40): projects along the bar ("projects", keyed by
   // group), and a group chip's members in its dropdown (see TabGroupChip).
   const reorder = window.useDragReorder(onReorder);
   return (
     <div className="tabs" onPointerDown={reorder.onPointerDown}>
-      {/* Tabs on one folder + profile share a chip (#27); a project with a
-          single tab renders as a plain tab. */}
-      {groupTabs(projects).map((group) => {
-        if (group.tabs.length > 1) {
-          return (
-            <TabGroupChip key={group.key}
-              group={group}
-              activeId={activeId}
-              profileLabel={profileLabel}
-              onSelect={onSelect}
-              onClose={onClose}
-              onNewInProject={onNewInProject}
-              onRename={onRename}
-              reorder={reorder}
-            />
-          );
-        }
-        const p = group.tabs[0];
-        const active = p.id === activeId;
-        const profile = profileLabel(p.profile);
-        return (
-          <div key={p.id}
-            {...reorder.itemProps("projects", group.key, "x")}
-            className={`tab ${active ? "active" : ""}${reorder.dropClass("projects", group.key)}`}
-            {...tabClickProps(() => onSelect(p.id), () => onClose?.(p.id))}
-            // The first click of the pair already selected the tab.
-            onDoubleClick={e => { if (onRename && !e.target.closest(".tab-close")) setRenaming(p.id); }}>
-            <span className="tab-bar-mark" style={{ background: active ? p.color : "transparent" }} />
-            <Icon name="folder" size={11} color={active ? p.color : "var(--fg-4)"} />
-            <TabRunDot state={p.runState} />
-            {renaming === p.id ? (
-              <RenameField value={p.name}
-                onCommit={name => onRename(p.id, name)}
-                onClose={() => setRenaming(null)} />
-            ) : (
-              <TabLabel tab={p} className="tab-name" title={`${p.name}\n${OMP_TR("double-click to rename")}`} />
-            )}
-            {profile && (
-              <span className="chip muted tab-profile" title={`${OMP_TR("profile:")} ${profile}`}>{profile}</span>
-            )}
-            <button className="tab-close" onClick={e => { e.stopPropagation(); onClose?.(p.id); }}><Icon name="close" size={9} /></button>
-          </div>
-        );
-      })}
+      {/* Every project is one chip (#27), even with a single tab — the
+          dropdown is how you open another conversation in that folder. */}
+      {groupTabs(projects).map((group) => (
+        <TabGroupChip key={group.key}
+          group={group}
+          activeId={activeId}
+          profileLabel={profileLabel}
+          onSelect={onSelect}
+          onClose={onClose}
+          onNewInProject={onNewInProject}
+          onRename={onRename}
+          reorder={reorder}
+        />
+      ))}
       {/* The Settings app tab (#37): pinned after the projects, never
           dragged; `changed` counts settings off their default. */}
       {settings?.open && (
@@ -200,7 +168,7 @@ function StatusBar({ ctx, todoDone, todoTotal, onTodo, updater, branch, tabId, b
       <span className="status-cell st-tps mono"><span style={{ color: "var(--fg-3)" }}>{ctx.tokensPerSec}</span> t/s</span>
       <span className="status-sep">·</span>
       <button className="status-cell btn ghost" onClick={onTodo}
-        title={todoChord ? `${OMP_TR("plan kanban")} (${todoChord})` : OMP_TR("plan kanban")}
+        title={todoChord ? `${OMP_TR("tasks")} (${todoChord})` : OMP_TR("tasks")}
         style={{ height: 20, padding: "0 6px" }}>
         <Icon name="plan" size={11} color="var(--accent)" />
         <span style={{ color: "var(--accent)" }}>{OMP_TR("todo")} {todoDone}/{todoTotal}</span>
@@ -319,71 +287,71 @@ function SessionMinimap({ messages, hoveredIdx, onHover, onClick }) {
   );
 }
 
-// ── Right rail: ambient peripherals stacked ──────────────────────────
-// `show`: { context, radar, subagents, minimap } — false hides that card
-// (Settings → Rail, keys showContext/showRadar/showSubagents/showMinimap);
-// `children` (widget plugin cards) sit between subagents and the minimap.
-function AmbientRail({
-  ctx, activity, messages, microcopy, sparklineValues, hoveredMsgIdx, onMinimapHover, onMinimapClick,
-  subagents, subagentPaneOpen, onOpenSubagent, onToggleSubagentPane,
-  show = {}, children,
-}) {
-  // Use live tps samples. Before the first turn, sparklineValues is all zeros
-  // which renders as a flat baseline — honest, not fake random data.
-  const sparkVals = (sparklineValues && sparklineValues.length > 0)
-    ? sparklineValues
+// ── Rail cards, shared with the Session activity view ────────────────
+// Context (token gauge + throughput sparkline).
+function ContextCard({ ctx, sparkValues }) {
+  const sparkVals = (sparkValues && sparkValues.length > 0)
+    ? sparkValues
     : Array(30).fill(0);
   return (
-    <aside className="rail">
-      {(show.context ?? true) && (
-        <div className="rail-card glass">
-          <TokenGauge used={ctx.used} total={ctx.total} pct={ctx.pct}
-            label={ctx.label} sub={`${OMP_TR("cost")} ${ctx.cost} · ${ctx.tokensPerSec} t/s`} />
-          <div className="rail-spark">
-            <Sparkline values={sparkVals} width={210} height={28} />
-            <div className="rail-spark-foot mono">
-              <span style={{ color: "var(--fg-4)" }}>{OMP_TR("throughput")}</span>
-              <span style={{ color: "var(--accent)" }}>{ctx.tokensPerSec} t/s</span>
-            </div>
-          </div>
+    <div className="rail-card glass">
+      <TokenGauge used={ctx.used} total={ctx.total} pct={ctx.pct}
+        label={ctx.label} sub={`${OMP_TR("cost")} ${ctx.cost} · ${ctx.tokensPerSec} t/s`} />
+      <div className="rail-spark">
+        <Sparkline values={sparkVals} width={210} height={28} />
+        <div className="rail-spark-foot mono">
+          <span style={{ color: "var(--fg-4)" }}>{OMP_TR("throughput")}</span>
+          <span style={{ color: "var(--accent)" }}>{ctx.tokensPerSec} t/s</span>
         </div>
-      )}
-
-      {(show.radar ?? true) && (
-        <div className="rail-card glass">
-          <div className="rail-card-head">
-            <Icon name="radar" size={11} color="var(--accent)" />
-            <span className="mono" style={{ color: "var(--fg-2)" }}>{OMP_TR("agent radar")}</span>
-            <span className="chip muted mono" style={{ marginLeft: "auto" }}>{OMP_TR("last 60s")}</span>
-          </div>
-          <ActivityRadar activity={activity} tps={ctx.tokensPerSec} />
-          <div className="legend">
-            {Object.entries(TOOL_META).filter(([k]) => ["read","search","edit","bash"].includes(k)).map(([k, m]) => (
-              <span key={k} className="legend-item">
-                <span style={{ background: m.color }} /> {m.label}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {(show.subagents ?? true) && (
-        <SubagentRailCard agents={subagents} paneOpen={subagentPaneOpen}
-          onOpen={onOpenSubagent} onTogglePane={onToggleSubagentPane} />
-      )}
-
-      {children}
-      {(show.minimap ?? true) && (
-        <div className="rail-card glass" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 120 }}>
-          <div className="rail-card-head">
-            <Icon name="minimap" size={11} color="var(--fg-3)" />
-            <span className="mono" style={{ color: "var(--fg-2)" }}>{OMP_TR("minimap")}</span>
-          </div>
-          <SessionMinimap messages={messages} hoveredIdx={hoveredMsgIdx} onHover={onMinimapHover} onClick={onMinimapClick} />
-        </div>
-      )}
-    </aside>
+      </div>
+    </div>
   );
 }
 
-Object.assign(window, { WindowChrome, TabBar, StatusBar, AmbientRail, SessionMinimap });
+// Agent radar (last 60s of tool activity). `flat` omits the card head —
+// the Session view's accordion supplies the title.
+function RadarCard({ activity, tps, flat = false }) {
+  return (
+    <div className="rail-card glass">
+      {!flat && (
+        <div className="rail-card-head">
+          <Icon name="radar" size={11} color="var(--accent)" />
+          <span className="mono" style={{ color: "var(--fg-2)" }}>{OMP_TR("agent radar")}</span>
+          <span className="chip muted mono" style={{ marginLeft: "auto" }}>{OMP_TR("last 60s")}</span>
+        </div>
+      )}
+      <ActivityRadar activity={activity} tps={tps} />
+      <div className="legend">
+        {Object.entries(TOOL_META).filter(([k]) => ["read","search","edit","bash"].includes(k)).map(([k, m]) => (
+          <span key={k} className="legend-item">
+            <span style={{ background: m.color }} /> {m.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Session minimap. `grow` stretches the card (the rail's filler); the
+// side view sizes it by content instead.
+function MinimapCard({ messages, hoveredIdx, onHover, onClick, grow = false, flat = false }) {
+  return (
+    <div className="rail-card glass" style={grow ? { flex: 1, display: "flex", flexDirection: "column", minHeight: 120 } : undefined}>
+      {!flat && (
+        <div className="rail-card-head">
+          <Icon name="minimap" size={11} color="var(--fg-3)" />
+          <span className="mono" style={{ color: "var(--fg-2)" }}>{OMP_TR("minimap")}</span>
+        </div>
+      )}
+      <SessionMinimap messages={messages} hoveredIdx={hoveredIdx} onHover={onHover} onClick={onClick} />
+    </div>
+  );
+}
+
+// ── Right rail (phase 3 of the workspace layout): widget plugin cards
+// only — the per-tab ambient cards live in the Session activity view. The
+// rail renders no chrome of its own; app-live mounts it only when there is
+// widget UI. The shared card bodies above (ContextCard, RadarCard,
+// MinimapCard) stay exported for design/side-views/session-view.jsx.
+
+Object.assign(window, { WindowChrome, TabBar, StatusBar, SessionMinimap, ContextCard, RadarCard, MinimapCard });

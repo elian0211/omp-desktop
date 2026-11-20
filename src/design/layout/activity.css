@@ -1,0 +1,115 @@
+/* Activity bar + side panel (workspace layout redesign) ───────────── */
+
+.activity-bar {
+  width: var(--w-activity, 48px); flex: none; min-height: 0;
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  padding: 6px 0;
+  border-right: 1px solid var(--line);
+  background: var(--bg-window);
+  z-index: 2;
+}
+
+.activity-btn {
+  position: relative;
+  appearance: none; border: 0; background: transparent;
+  width: 100%; height: 40px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-4); cursor: pointer;
+}
+.activity-btn::before {
+  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px;
+  border-radius: 0 2px 2px 0; background: transparent;
+}
+.activity-btn:hover { color: var(--fg-2); background: var(--bg-hover); }
+.activity-btn.active { color: var(--fg); background: var(--bg-surface); }
+.activity-btn.active::before { background: var(--accent); }
+.activity-btn:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: -2px;
+}
+
+/* Title bubble to the right of the icon (plan: hover tip, not icon-only). */
+.activity-tip {
+  display: none;
+  position: absolute; left: calc(100% + 10px); top: 50%;
+  transform: translateY(-50%);
+  z-index: 20; pointer-events: none;
+  padding: 4px 8px; white-space: nowrap;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--r-1);
+  box-shadow: 0 4px 12px color-mix(in oklab, #000 35%, transparent);
+  font-size: var(--d-text-xs); color: var(--fg);
+}
+.activity-btn:hover .activity-tip,
+.activity-btn:focus-visible .activity-tip { display: block; }
+
+.side-panel {
+  width: var(--w-sidebar, 220px); flex: none; min-height: 0; min-width: 0;
+  display: flex; flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--bg-window);
+}
+
+.side-panel-stub { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.side-panel-stub-body {
+  padding: 16px 14px; font-size: var(--d-text-sm); color: var(--fg-4); line-height: 1.45;
+}
+
+/* Files activity view (tree-only; the detail lives in the stage panel). */
+.files-view { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.files-view .gitb-files { flex: 1; min-height: 0; border-right: 0; }
+.side-view-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px; flex: 1; padding: 16px; text-align: center;
+  color: var(--fg-4); font-size: var(--d-text-sm);
+}
+.side-view-empty-sub { font-size: var(--d-text-xs); color: var(--fg-4); }
+
+/* Explorer view footer: the 已更改 / 全部 switch as a tab-group-style
+   pill pair, with the commented / ignored-files mini toggles beside it. */
+.fv-foot {
+  flex: none; display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--line-soft);
+}
+.fv-spacer { flex: 1; }
+.fv-tabs {
+  display: inline-flex; gap: 2px; padding: 2px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.fv-tab {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 10px; border-radius: 7px;
+  font-size: var(--d-text-xs); color: var(--fg-3);
+}
+.fv-tab:hover { color: var(--fg); }
+.fv-tab.on { background: var(--accent-soft); color: var(--accent); }
+
+/* Session activity view: the old rail cards as one accordion. */
+.sv-view {
+  display: flex; flex-direction: column; gap: 6px;
+  min-height: 0; flex: 1; overflow-y: auto; padding: 8px;
+}
+.sv-section { padding: 0; }
+.sv-head {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  width: 100%; padding: 7px 10px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--d-text-xs); color: var(--fg-2); text-align: left;
+}
+.sv-head:hover { color: var(--fg); }
+.sv-caret {
+  margin-left: auto; width: 0; height: 0;
+  border-left: 4px solid var(--fg-4); border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  transition: transform 0.12s ease;
+}
+.sv-caret.folded { transform: rotate(0deg); }
+.sv-caret:not(.folded) { transform: rotate(90deg); }
+.sv-body { padding: 0 8px 8px; }
+.sv-body .rail-card { border: 0; background: transparent; padding: 0; }
+/* The PR card's own collapse toggle is redundant under the accordion head. */
+.sv-body .pr-changes-head { display: none; }

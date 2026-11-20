@@ -1,27 +1,19 @@
 /* ═════════════════════════════════════════════════════════════════════
-   project-sidebar.jsx — left project navigator (issue #27)
-
-   `open`: every tab, grouped by project (folder + profile) exactly like the
-   tab bar (`OMP_PROJECT_NAV.groupTabs`), multi-tab projects expandable.
-   `recent`: recently opened folders of the active profile that have no
-   open tab — computed by the caller (`recentRows`), since only it knows
-   the active profile. Rows are containers; the click targets inside them
-   are real buttons, so every action is keyboard-reachable.
+   workspaces-view.jsx — Workspaces activity view (phase 1 of
+   docs/plans/2026-11-20-workspace-layout/). Port of the former project
+   sidebar: open tabs grouped by folder+profile, sessions with run dots,
+   recents, browse. Tab bar stays the strip of open conversations.
    ═════════════════════════════════════════════════════════════════════ */
 
 const { Icon, TabRunDot, TabLabel, RenameField } = window;
 const { groupTabs, groupRunState, groupTarget, membersNewestFirst, basename, parentName } = window.OMP_PROJECT_NAV;
 
-function ProjectSidebar({
+function WorkspacesView({
   tabs, activeId, recents, profileLabel, projectAppearances,
   onSelectTab, onCloseTab, onRenameTab, onNewInProject, onOpenRecent, onForgetRecent, onOpenFolder, onReorder,
 }) {
-  // Group keys the user folded. Not persisted: tab ids (and so pathless
-  // groups' keys) don't survive a restart anyway.
   const [collapsed, setCollapsed] = React.useState({});
   const toggle = key => setCollapsed(c => ({ ...c, [key]: !c[key] }));
-  // Tab whose name is being edited inline (#32). Starting selects it, the
-  // same as the first click of a double-click does.
   const [renaming, setRenaming] = React.useState(null);
   const startRename = id => { onSelectTab(id); setRenaming(id); };
   const renameField = t => (
@@ -29,7 +21,6 @@ function ProjectSidebar({
       onCommit={name => onRenameTab(t.id, name)}
       onClose={() => setRenaming(null)} />
   );
-  // A row's icon action (new conversation, rename, close, forget recent).
   const actButton = (title, icon, size, onClick) => (
     <button className="psb-act" title={title} onClick={onClick}>
       <Icon name={icon} size={size} />
@@ -38,13 +29,11 @@ function ProjectSidebar({
   const renameButton = t => actButton(OMP_TR("rename conversation"), "edit", 10, () => startRename(t.id));
   const closeButton = id => actButton(OMP_TR("close tab"), "close", 9, () => onCloseTab(id));
   const groups = groupTabs(tabs);
-  // Drag to reorder (#40), the same lists as the tab bar's: projects (a
-  // project's rows move as one block), and members within their project.
   const reorder = window.useDragReorder(onReorder);
 
   return (
-    <aside className="project-sidebar" aria-label={OMP_TR("projects")}>
-      <div className="psb-head">{OMP_TR("projects")}</div>
+    <div className="workspaces-view" aria-label={OMP_TR("Workspaces")}>
+      <div className="psb-head">{OMP_TR("Workspaces")}</div>
 
       <div className="psb-scroll" onPointerDown={reorder.onPointerDown}>
         <div className="psb-section">{OMP_TR("open tabs")}</div>
@@ -58,9 +47,6 @@ function ProjectSidebar({
           const appearance = window.OMP_PROJECT_APPEARANCE.forProject(projectAppearances, group.path);
           const folderColor = appearance?.accent || (containsActive ? "var(--accent)" : "var(--fg-4)");
           const folderIcon = <Icon name="folder" size={11} color={folderColor} />;
-          // Single-tab cards show `folder · title` (#46), which ellipsizes.
-          // The tooltip keeps the full title plus the folder path; multi-tab
-          // project rows still tip the path (member rows tip each tab name).
           const cardTip = multi
             ? (group.path || group.name)
             : [group.tabs[0].name, group.path].filter(Boolean).join("\n");
@@ -68,9 +54,6 @@ function ProjectSidebar({
           return (
             <div key={group.key} {...reorder.itemProps("projects", group.key, "y")}
               className={`psb-group${reorder.dropClass("projects", group.key)}`}>
-              {/* A multi-tab project row is only highlighted through its
-                  active member row, as in the mockup; a single-tab one is
-                  that tab. */}
               <div className={`psb-row psb-project ${containsActive && !expanded ? "active" : ""}`}>
                 {multi ? (
                   <button className={`psb-chev ${expanded ? "open" : ""}`}
@@ -149,8 +132,8 @@ function ProjectSidebar({
       <button className="psb-foot" onClick={onOpenFolder}>
         <Icon name="plus" size={11} />{OMP_TR("open folder…")}
       </button>
-    </aside>
+    </div>
   );
 }
 
-Object.assign(window, { ProjectSidebar });
+Object.assign(window, { WorkspacesView });

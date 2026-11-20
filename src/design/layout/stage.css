@@ -35,7 +35,10 @@
 }
 .pane-resize.at-split { grid-row: 1; grid-column: 2; }
 .pane-resize.at-side { grid-row: 1; grid-column: -2; }
-.pane-resize.at-sidebar { left: calc(var(--w-sidebar, 220px) - 3px); }
+/* Side panel sits after the fixed activity bar (`--w-activity`). */
+.pane-resize.at-sidebar {
+  left: calc(var(--w-activity, 48px) + var(--w-sidebar, 220px) - 3px);
+}
 .pane-resize-tip {
   display: none; position: absolute; top: 50%; transform: translateY(-50%);
   padding: 2px 7px; white-space: nowrap; pointer-events: none;
@@ -63,10 +66,20 @@
 /* Fills the column; the canvas draws its own background (see
    design/empty-workspace.jsx), so it needs no fill here. */
 .empty-ws-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-/* Bridge notes float over the rain, below the logo. */
+.empty-ws-fore {
+  position: absolute; inset: 0; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 24px; gap: 12px; pointer-events: none;
+}
+.empty-ws-fore > * { pointer-events: auto; }
+.empty-ws-cta {
+  margin-bottom: 8px;
+  background: color-mix(in oklab, var(--bg-window) 88%, transparent);
+  border: 1px solid var(--line-bright);
+}
+/* Bridge notes float over the rain, above the CTA stack. */
 .empty-ws-notes {
-  position: absolute; left: 50%; bottom: 24px; transform: translateX(-50%);
-  width: min(460px, calc(100% - 48px));
+  width: min(460px, 100%);
   display: flex; flex-direction: column; gap: 8px;
 }
 .empty-ws-note {

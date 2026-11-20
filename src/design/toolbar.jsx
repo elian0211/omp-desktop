@@ -58,23 +58,23 @@ function ApprovalModeButton({ cell, onClick }) {
 
 /**
  * nav:      { sidebarOpen, onToggleSidebar, onOpenProject, onHistory }
- * rail, subagents, terminal: { open, onToggle }
+ * subagents, terminal: { open, onToggle } (the rail button is gone — the
+ *            Session activity view lives on the activity bar)
  * tree:     { open, onToggle, onRefresh, canRefresh }
  * browser:  { open, onToggle, annotate, canAnnotate, onAnnotate(on), fullView, onFullView(on) }
- * files:    { open, onToggle, fullView, onFullView(on) }
+ * files:    removed — the file tree lives in the activity bar's Files view
  * approvals: { cell, onOpen }; onGit, onStats, onCommands
  * profile:  ProfileMenu's props (profiles, activeId, startupId, on…)
  * settings: { active, onOpen }
  */
-function Toolbar({ nav, rail, subagents, tree, browser, files, terminal, onGit, approvals, onStats, onCommands, profile, settings }) {
+function Toolbar({ nav, subagents, tree, browser, terminal, onGit, approvals, onStats, onCommands, profile, settings }) {
   const commands = _tbChord("desktop.commands.open");
   return (
     <div className="toolbar" role="toolbar" aria-label={OMP_TR("app toolbar")}>
       <div className="tb-main">
-        <ToolButton icon="sidebar" title={_tbTip("project sidebar", "desktop.sidebar.toggle")}
+        <ToolButton icon="sidebar" title={_tbTip("side panel", "desktop.sidebar.toggle")}
           pressed={nav.sidebarOpen} onClick={nav.onToggleSidebar} />
-        <ToolButton icon="rail" title={OMP_TR("ambient rail")} pressed={rail.open} onClick={rail.onToggle} />
-        <ToolButton icon="plus" title={_tbTip("open project", "desktop.tab.new")} onClick={nav.onOpenProject} />
+        <ToolButton icon="plus" title={_tbTip("Open a workspace", "desktop.tab.new")} onClick={nav.onOpenProject} />
         <ToolButton icon="clock" title={_tbTip("conversation history", "desktop.history.open")} onClick={nav.onHistory} />
         <span className="tb-sep" />
 
@@ -94,18 +94,13 @@ function Toolbar({ nav, rail, subagents, tree, browser, files, terminal, onGit, 
               onClick={() => browser.onFullView(!browser.fullView)} />
           </span>
         )}
-        <ToolButton icon="file" title={_tbTip("files panel", "desktop.files.toggle")} pressed={files.open} onClick={files.onToggle} />
-        {files.open && (
-          <span className="tb-sub" role="group" aria-label={OMP_TR("files panel")}>
-            <ToolButton icon="focus" title={OMP_TR("files panel full view")} pressed={files.fullView}
-              onClick={() => files.onFullView(!files.fullView)} />
-          </span>
-        )}
         <ToolButton icon="terminal" title={_tbTip("terminal", "desktop.terminal.toggle")} pressed={terminal.open} onClick={terminal.onToggle} />
         <span className="tb-sep" />
 
         <ToolButton icon="diff2" title={_tbTip("git browser", "desktop.panel.changes")} onClick={onGit} />
         <ToolButton icon="cost" title={_tbTip("usage statistics", "desktop.panel.stats")} onClick={onStats} />
+        <ToolButton icon="cog" title={_tbTip("settings", "desktop.settings.open")}
+          pressed={settings.active} onClick={settings.onOpen} />
       </div>
 
       <div className="tb-end">

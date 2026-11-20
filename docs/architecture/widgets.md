@@ -10,8 +10,8 @@ A plugin is an external process listed in the user's `<app config>/widgets.json`
 
 The frontend does two things only:
 
-- **Reports view state**: the active session, rail and window visibility, and hidden card ids.
-- **Renders**: parses stdout with `OMP_WIDGETS.parseOutput` and shows the cards.
+- **Reports view state**: the active session, rail and window visibility, and hidden card ids. "Rail visible" is the desktop's chosen rule, not a column check (`app-live.jsx`): the layout is not focus and a tab is open — so interval plugins keep running while the widget column happens to be hidden (workspace layout, phase 3: the column shows only widget cards and vanishes when empty).
+- **Renders**: parses stdout with `OMP_WIDGETS.parseOutput` and shows the cards. The cards mount in a right column only when there is widget UI (errors, approvals or cards); the per-tab ambient cards live in the Session activity view instead.
 
 It never sends a path, a command, a trigger or a context to Rust: only plugin ids and that view state.
 
