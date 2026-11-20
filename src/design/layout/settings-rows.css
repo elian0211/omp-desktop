@@ -136,3 +136,63 @@
   font-family: var(--font-mono); font-size: var(--d-text-xs);
 }
 .st-int-role input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Models (Settings → Models): provider cards and model rows editing the
+   profile's models.yml (app/models.js, rows-models.jsx). */
+.st-models { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.st-mprv { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg-input); }
+.st-mprv-head { display: flex; align-items: center; gap: 10px; }
+.st-mprv-id { flex: none; width: 150px; padding: 5px 8px; border: 1px solid var(--line);
+  border-radius: 7px; background: var(--bg-elevated); color: var(--fg); font-size: var(--d-text-sm); }
+.st-mprv-hint { flex: 1; color: var(--fg-4); font-size: var(--d-text-xs); }
+.st-mprv-grid { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 8px 18px; }
+.st-mprv-grid label { display: flex; flex-direction: column; gap: 4px; color: var(--fg-3);
+  font-size: var(--d-text-xs); }
+.st-mprv-grid input { padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--bg-elevated); color: var(--fg); font-size: var(--d-text-xs); }
+.st-mprv-grid input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.st-mmodels { display: flex; flex-direction: column; gap: 6px; }
+.st-mmodels-head { display: flex; align-items: center; gap: 10px; color: var(--fg-3);
+  font-size: var(--d-text-xs); }
+.st-mdl { display: flex; align-items: center; gap: 8px; }
+.st-mdl-x { flex: none; width: 22px; padding: 0; }
+.st-mdl-id { width: 200px; }
+.st-mdl-name { width: 160px; }
+.st-mdl-num { width: 110px; }
+.st-mdl input { padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--bg-elevated); color: var(--fg); font-size: var(--d-text-xs); }
+.st-mdl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.st-mdl-r { display: inline-flex; align-items: center; gap: 5px; color: var(--fg-3);
+  font-size: var(--d-text-xs); }
+.st-models-actions { display: flex; align-items: center; gap: 10px; }
+.st-models-save { border: 1px solid var(--accent); color: var(--accent); }
+.st-mpath { color: var(--fg-4); font-size: var(--d-text-xs); overflow-wrap: anywhere; }
+
+/* MCP (Settings → MCP): server editor and the project's read-only list
+   (app/mcp.js, rows-mcp.jsx). */
+.st-mcp { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.st-mcp-srv { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg-input); }
+.st-mcp-head { display: flex; align-items: center; gap: 10px; }
+.st-mcp-name { width: 180px; padding: 5px 8px; border: 1px solid var(--line);
+  border-radius: 7px; background: var(--bg-elevated); color: var(--fg); font-size: var(--d-text-sm); }
+.st-mcp-grid { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 8px 18px; }
+.st-mcp-grid label { display: flex; flex-direction: column; gap: 4px; color: var(--fg-3);
+  font-size: var(--d-text-xs); }
+.st-mcp-grid input[type="text"] { padding: 5px 8px; border: 1px solid var(--line);
+  border-radius: 7px; background: var(--bg-elevated); color: var(--fg); font-size: var(--d-text-xs); }
+.st-mcp-grid input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.st-mcp-check { flex-direction: row !important; align-items: center; gap: 6px !important; }
+.st-mcp-actions { display: flex; align-items: center; gap: 10px; }
+.st-mcp-save { border: 1px solid var(--accent); color: var(--accent); }
+.st-mcp-ro { flex-direction: row; align-items: center; gap: 12px; padding: 7px 12px; }
+.st-mcp-type { color: var(--fg-3); font-size: var(--d-text-xs); }
+.st-mcp-src { flex: 1; color: var(--fg-4); font-size: var(--d-text-xs); overflow-wrap: anywhere; }
+.st-mcp-fold { flex: none; width: 22px; height: 22px; padding: 0; line-height: 1;
+  border: none; background: none; color: var(--fg-3); cursor: pointer; }
+.st-mcp-fold:hover { color: var(--fg); }
+.st-mcp-head { cursor: pointer; }
+.st-mcp-head input, .st-mcp-head button, .st-mcp-head label { cursor: auto; }
+.st-mcp-head button { cursor: pointer; }
+.st-mcp-name.off { text-decoration: line-through; opacity: 0.55; }

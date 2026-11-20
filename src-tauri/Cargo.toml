@@ -20,6 +20,12 @@ tauri-plugin-updater = "2.13"
 serde = { version = "1", features = ["derive"] }
 # `raw_value`: the conversation tree skips message bodies it does not read.
 serde_json = { version = "1", features = ["raw_value"] }
+# models.yml is nested YAML (providers → models) — too deep for the flat-map
+# reader keybindings uses, so the desktop parses it with serde_yaml. Comments
+# a hand edit put in the file are not preserved across a Settings write.
+serde_yaml = "0.9"
+# mcp.json server `url` validation (`Url::parse` + scheme check).
+url = "2"
 notify = "8"
 gix = "0.87"
 open = { version = "5", features = ["shellexecute-on-windows"] }

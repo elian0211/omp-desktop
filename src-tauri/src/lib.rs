@@ -22,11 +22,13 @@ mod git_browser;
 mod git_watcher;
 mod goal_config;
 mod json_store;
-mod omp_native_config;
 mod keybindings;
+mod mcp_config;
 mod model_usage;
+mod models_config;
 mod navigation_guard;
 mod omp_cli;
+mod omp_native_config;
 mod open_tabs;
 mod pr_automation;
 mod private_fs;
@@ -54,6 +56,7 @@ use approval::RuleBook;
 use approval_mode::{ApprovalModeStore, ApprovalModeView};
 use external_open::OpenProjectState;
 use git_watcher::GitWatcherState;
+use std::collections::BTreeMap;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -878,8 +881,11 @@ fn open_url_external(url: String) -> Result<(), String> {
 /// command thread. The same holds for every `git_browser_*` command below
 /// (blob diffs, history walks).
 #[tauri::command]
-async fn git_browser_status(path: String) -> Result<git_browser::StatusView, String> {
-    off_ipc(move || git_browser::status(Path::new(&path))).await?
+async fn git_browser_status(
+    path: String,
+    all_files: Option<bool>,
+) -> Result<git_browser::StatusView, String> {
+    off_ipc(move || git_browser::status(Path::new(&path), all_files.unwrap_or(false))).await?
 }
 
 /// One work-tree file in full with its change against `HEAD` inline — see
@@ -1131,6 +1137,172 @@ async fn intelligence_settings_set(
 ) -> Result<omp_native_config::IntelligenceSettings, String> {
     let profile = store.resolve_owned(profile)?;
     off_ipc(move || omp_native_config::set(profile.as_deref(), patch)).await?
+}
+
+/// The profile's `models.yml` snapshot for Settings → Models: path,
+/// existence, parse failure and the providers (their `apiKey` masked — see
+/// `models_config`). See also `models_config_set`.
+#[tauri::command]
+async fn models_config_get(
+    profile: Option<String>,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+    app: AppHandle,
+) -> Result<serde_json::Value, String> {
+    let profile = store.resolve_owned(profile)?;
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    let env_dir = std::env::var_os("PI_CODING_AGENT_DIR");
+    off_ipc(move || {
+        Ok(models_config::get(
+            &home,
+            profile.as_deref(),
+            env_dir.as_deref(),
+        ))
+    })
+    .await?
+}
+
+/// Rebuilds `models.yml` from the editor's provider list (see `models_config`)
+/// and returns the fresh snapshot. `api_keys` carries typed keys (`""`
+/// clears); providers the frontend sends back unchanged keep theirs.
+#[tauri::command]
+async fn models_config_set(
+    profile: Option<String>,
+    providers: Vec<serde_json::Value>,
+    api_keys: BTreeMap<String, String>,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+    app: AppHandle,
+) -> Result<serde_json::Value, String> {
+    let profile = store.resolve_owned(profile)?;
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    let env_dir = std::env::var_os("PI_CODING_AGENT_DIR");
+    off_ipc(move || {
+        models_config::set(
+            &home,
+            profile.as_deref(),
+            env_dir.as_deref(),
+            &providers,
+            &api_keys,
+        )
+    })
+    .await?
+}
+
+/// Resolves the optional `project` argument of the MCP commands: a frontend
+/// path is canonicalised (paths to the frontend are canonical; the reverse
+/// trip must re-anchor in Rust) and must be a directory.
+fn mcp_project_dir(project: Option<String>) -> Result<Option<PathBuf>, String> {
+    project
+        .filter(|p| !p.trim().is_empty())
+        .map(|p| external_open::canonical_folder(Path::new(&p)).map(PathBuf::from))
+        .transpose()
+}
+
+/// The directory an MCP scope edits: the profile's agent dir for `user`, the
+/// canonical project folder for `project`.
+fn mcp_scope_dir(
+    profile: Option<&str>,
+    scope: &str,
+    project: Option<&Path>,
+    home: &Path,
+) -> Result<PathBuf, String> {
+    match scope {
+        "user" => Ok(profiles::agent_dir_for(
+            home,
+            profile,
+            std::env::var_os("PI_CODING_AGENT_DIR").as_deref(),
+        )),
+        "project" => project
+            .map(Path::to_path_buf)
+            .ok_or_else(|| "a project path is required for the project scope".to_string()),
+        other => Err(format!("unknown MCP scope: {other}")),
+    }
+}
+
+/// The MCP snapshot for Settings → MCP: the profile's user `mcp.json` plus,
+/// when a project path is given, that project's. `env`/`headers` are
+/// redacted — see `mcp_config`.
+#[tauri::command]
+async fn mcp_config_get(
+    profile: Option<String>,
+    project: Option<String>,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+    app: AppHandle,
+) -> Result<serde_json::Value, String> {
+    let profile = store.resolve_owned(profile)?;
+    let project = mcp_project_dir(project)?;
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    let env_dir = std::env::var_os("PI_CODING_AGENT_DIR");
+    off_ipc(move || {
+        Ok(mcp_config::get(
+            &home,
+            profile.as_deref(),
+            env_dir.as_deref(),
+            project.as_deref(),
+        ))
+    })
+    .await?
+}
+
+/// Arguments of [`mcp_server_set`] (repo rule: no `too_many_arguments` at
+/// this lint gate; Tauri deserialises the invoke object into the struct).
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct McpServerSetArgs {
+    profile: Option<String>,
+    project: Option<String>,
+    /// `"user"` or `"project"`.
+    scope: String,
+    name: String,
+    server: serde_json::Value,
+    previous_name: Option<String>,
+}
+
+/// Adds or renames one MCP server (`scope` `user` or `project`) and returns
+/// the refreshed snapshot. `server` arrives without `env`/`headers`; stored
+/// secrets survive an edit that omits them. See `mcp_config`.
+#[tauri::command]
+async fn mcp_server_set(
+    args: McpServerSetArgs,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+    app: AppHandle,
+) -> Result<serde_json::Value, String> {
+    let McpServerSetArgs {
+        profile,
+        project,
+        scope,
+        name,
+        server,
+        previous_name,
+    } = args;
+    let profile = store.resolve_owned(profile)?;
+    let project = mcp_project_dir(project)?;
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    off_ipc(move || {
+        let dir = mcp_scope_dir(profile.as_deref(), &scope, project.as_deref(), &home)?;
+        mcp_config::set_server(&dir, &name, &server, previous_name.as_deref())
+    })
+    .await?
+}
+
+/// Removes one MCP server (`scope` `user` or `project`) and returns the
+/// refreshed snapshot.
+#[tauri::command]
+async fn mcp_server_delete(
+    profile: Option<String>,
+    project: Option<String>,
+    scope: String,
+    name: String,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+    app: AppHandle,
+) -> Result<serde_json::Value, String> {
+    let profile = store.resolve_owned(profile)?;
+    let project = mcp_project_dir(project)?;
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    off_ipc(move || {
+        let dir = mcp_scope_dir(profile.as_deref(), &scope, project.as_deref(), &home)?;
+        mcp_config::delete_server(&dir, &name)
+    })
+    .await?
 }
 
 /// Shared profile-resolution and home-dir setup for the three keybindings
@@ -1671,6 +1843,11 @@ pub fn run() {
             goal_continuation_set,
             intelligence_settings_get,
             intelligence_settings_set,
+            models_config_get,
+            models_config_set,
+            mcp_config_get,
+            mcp_server_set,
+            mcp_server_delete,
             list_project_files,
             list_profiles,
             create_profile,

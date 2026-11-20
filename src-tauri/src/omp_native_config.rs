@@ -38,7 +38,7 @@ pub const MODEL_ROLES: &[&str] = &[
 static CONFIG_LOCK: Mutex<()> = Mutex::new(());
 
 /// The Intelligence + modelRoles snapshot the Settings page edits.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct IntelligenceSettings {
     #[serde(default)]
@@ -55,7 +55,7 @@ pub struct IntelligenceSettings {
     pub model_roles: BTreeMap<String, String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct CompactionDetails {
     pub mid_turn_enabled: bool,
@@ -68,12 +68,15 @@ impl Default for CompactionDetails {
         Self {
             mid_turn_enabled: true,
             auto_continue: true,
-            method_order: COMPACTION_METHODS.iter().map(|s| (*s).to_string()).collect(),
+            method_order: COMPACTION_METHODS
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect(),
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MemorySettings {
     pub backend: String,
@@ -87,7 +90,7 @@ impl Default for MemorySettings {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct AutolearnSettings {
     pub enabled: bool,
@@ -103,7 +106,7 @@ impl Default for AutolearnSettings {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct MnemopiSettings {
     pub scoping: String,
@@ -121,7 +124,7 @@ impl Default for MnemopiSettings {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RetryDetails {
     pub max_retries: u32,
@@ -194,7 +197,10 @@ pub fn get(profile: Option<&str>) -> Result<IntelligenceSettings, String> {
 }
 
 /// Apply a patch and return the re-read snapshot.
-pub fn set(profile: Option<&str>, patch: IntelligencePatch) -> Result<IntelligenceSettings, String> {
+pub fn set(
+    profile: Option<&str>,
+    patch: IntelligencePatch,
+) -> Result<IntelligenceSettings, String> {
     let _guard = CONFIG_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
     validate_patch(&patch)?;
     if let Some(c) = &patch.compaction {
@@ -351,7 +357,9 @@ fn sanitize_method_order(order: &[String]) -> Vec<String> {
     out
 }
 
-fn sanitize_model_roles(roles: &BTreeMap<String, String>) -> Result<BTreeMap<String, String>, String> {
+fn sanitize_model_roles(
+    roles: &BTreeMap<String, String>,
+) -> Result<BTreeMap<String, String>, String> {
     let mut out = BTreeMap::new();
     for (role, selector) in roles {
         if !MODEL_ROLES.contains(&role.as_str()) {
@@ -402,10 +410,10 @@ fn get_bool(profile: Option<&str>, key: &str) -> Result<Option<bool>, String> {
 fn get_u32(profile: Option<&str>, key: &str) -> Result<Option<u32>, String> {
     match get_raw(profile, key)? {
         None | Some(Value::Null) => Ok(None),
-        Some(Value::Number(n)) => match n.as_u64().and_then(|v| u32::try_from(v).ok()) {
-            Some(v) => Ok(Some(v)),
-            None => Err(unexpected(key, &Value::Number(n))),
-        },
+        Some(Value::Number(n)) => n
+            .as_u64()
+            .and_then(|v| u32::try_from(v).ok())
+            .map_or_else(|| Err(unexpected(key, &Value::Number(n))), |v| Ok(Some(v))),
         Some(other) => Err(unexpected(key, &other)),
     }
 }
@@ -469,7 +477,11 @@ fn parse_config_value(stdout: &[u8], key: &str) -> Result<Option<Value>, String>
     let text = text.trim();
     let unexpected_raw = || {
         let snippet: String = text.chars().take(OUTPUT_SNIPPET_MAX_CHARS).collect();
-        let ellipsis = if snippet.len() < text.len() { "…" } else { "" };
+        let ellipsis = if snippet.len() < text.len() {
+            "…"
+        } else {
+            ""
+        };
         format!("unexpected {key} from omp: {snippet}{ellipsis}")
     };
     let mut parsed: Value = serde_json::from_str(text).map_err(|_| unexpected_raw())?;
@@ -540,7 +552,9 @@ mod tests {
 
     #[test]
     fn parse_config_value_rejects_non_json() {
-        assert!(parse_config_value(b"nope", "k").unwrap_err().contains("nope"));
+        assert!(parse_config_value(b"nope", "k")
+            .unwrap_err()
+            .contains("nope"));
     }
 
     #[test]
@@ -557,7 +571,10 @@ mod tests {
         roles.insert("advisor".into(), " anthropic/claude-x:high ".into());
         roles.insert("smol".into(), String::new());
         let cleaned = sanitize_model_roles(&roles).unwrap();
-        assert_eq!(cleaned.get("advisor").map(String::as_str), Some("anthropic/claude-x:high"));
+        assert_eq!(
+            cleaned.get("advisor").map(String::as_str),
+            Some("anthropic/claude-x:high")
+        );
         assert!(!cleaned.contains_key("smol"));
     }
 
@@ -576,7 +593,9 @@ mod tests {
             }),
             ..IntelligencePatch::default()
         };
-        assert!(validate_patch(&patch).unwrap_err().contains("memory backend"));
+        assert!(validate_patch(&patch)
+            .unwrap_err()
+            .contains("memory backend"));
     }
 
     #[test]
