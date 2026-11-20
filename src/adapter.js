@@ -481,6 +481,17 @@
     const result = [];
     const messages = Array.isArray(apiMessages) ? apiMessages : [];
     const failures = window.OMP_TURN_STATUS.finalFailures(messages);
+    // toolCallId → { text, isError }: omp's toolResult messages, folded
+    // into the tool cards the matching toolCall block restores below.
+    const results = new Map();
+    for (const msg of messages) {
+      if (msg?.role !== "toolResult") continue;
+      const text = _resultText(msg);
+      results.set(msg.toolCallId, {
+        text,
+        isError: msg.isError === true,
+      });
+    }
     for (const [index, msg] of messages.entries()) {
       if (!msg || typeof msg !== "object") continue;
       const { role, content } = msg;
@@ -523,6 +534,30 @@
             tokens, tokensIn, tokensOut,
             ...(failure ? { failure } : {}),
           });
+        }
+        // Restore the message's tool calls as cards — a resumed session or a
+        // tab reopened after a restart has no live frames to build them from.
+        // The live card (diffs, eval cells, subagent detail) is richer; the
+        // merge below keeps it when both exist. Shape = buildToolStartCard
+        // finalized: omp's persisted message carries no details, so the card
+        // shows title/summary/output only.
+        for (const block of blocks) {
+          if (block.type !== "toolCall") continue;
+          const res = results.get(block.id);
+          const card = buildToolStartCard(
+            { toolName: block.name ?? "", toolCallId: block.id, args: block.arguments },
+            time,
+          );
+          card.status = "ok";
+          card.duration = null;
+          card.isError = res?.isError === true;
+          if (card.tool === "bash") {
+            if (res?.text) card.output = _bashLines(res.text);
+          } else if (res?.text) {
+            const line = res.text.split("\n").find(l => l.trim()) ?? "";
+            card.summary = line.length > 160 ? `${line.slice(0, 157)}…` : line;
+          }
+          result.push(card);
         }
       }
     }

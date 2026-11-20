@@ -1092,6 +1092,7 @@ function App() {
                     followOutput={t.followOutput}
                     submitKey={t.submitKey}
                   />
+                  <PlanPill kanban={kanban} onOpen={() => setPlanOpen(true)} />
                   <TerminalPanels sessions={sessions} activeId={planKey} terminal={terminal} />
                   <Composer
                     sessionId={planKey}

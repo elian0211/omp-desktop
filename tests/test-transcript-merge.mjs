@@ -58,7 +58,7 @@ const failedMsg = (text, ts) => ({
 // Entries built from an omp message carry its timestamp as `ts`.
 const liveUser = (text, ts) => ({ kind: "user", time: "live", ts, text, images: [] });
 const liveBubble = (text, ts, extra = {}) => ({ kind: "assistant", time: "live", ts, thought: null, lead: null, streaming: false, blocks: [{ type: "text", text }], ...extra });
-const liveTool = () => ({ kind: "tool", tool: "bash", status: "ok", _toolCallId: "toolu_1" });
+const liveTool = (id = "toolu_2") => ({ kind: "tool", tool: "bash", status: "ok", _toolCallId: id });
 const liveAsk = () => ({ kind: "ask", method: "select", answered: true, cancelled: false });
 const liveJob = () => ({ kind: "job", jobId: "bg_1", type: "bash", label: "sleep 8 && echo finished", durationMs: 8068 });
 const liveNote = (text) => ({ kind: "assistant", time: "live", blocks: [{ type: "text", text }], thought: null, lead: null, streaming: false, completed: true });
@@ -80,10 +80,12 @@ check("a reply after a tool call keeps its place, and so does everything after i
   const merged = mergeTranscript(live, persisted);
   assert.deepEqual(shape(merged), [`user:${PROMPT}`, "assistant:", "tool", "ask", "assistant:started", "job", "assistant:done"]);
   // Matched entries are the persisted copies; the rest are the live ones.
+  // The tool call now restores as a card and claims the live card's slot
+  // (tool call id), and the live card — richer — is what stays.
   assert.equal(merged[0], persisted[0]);
-  assert.equal(merged[4], persisted[1]);
-  assert.equal(merged[6], persisted[2]);
-  for (const i of [1, 2, 3, 5]) assert.equal(merged[i], live[i]);
+  assert.equal(merged[4], persisted[2]);
+  assert.equal(merged[6], persisted[3]);
+  assert.equal(merged[2], live[2]);
 });
 
 check("a message omp dropped from its context keeps its live bubble in place", () => {
@@ -94,12 +96,13 @@ check("a message omp dropped from its context keeps its live bubble in place", (
     toolResultMsg(4), replyMsg("done", 5),
   ]);
   const retried = liveBubble("", 2, { thought: "Let me look", pendingFailure: { raw: OVERLOADED } });
-  const live = [liveUser("go", 1), retried, liveBubble("", 3, { thought: "run it in the background" }), liveTool(), liveBubble("done", 5)];
+  const live = [liveUser("go", 1), retried, liveBubble("", 3, { thought: "run it in the background" }), liveTool("toolu_3"), liveBubble("done", 5)];
   const merged = mergeTranscript(live, persisted);
   assert.deepEqual(shape(merged), ["user:go", "assistant:", "assistant:", "tool", "assistant:done"]);
   assert.equal(merged[1], retried);
   assert.equal(merged[2], persisted[1]);
-  assert.equal(merged[4], persisted[2]);
+  assert.equal(merged[3], live[3]);
+  assert.equal(merged[4], persisted[3]);
   // A shown failure omp then dropped (an output-less turn after a context
   // rebuild, a refusal) stays too, and later turns keep their copies.
   const dropped = liveBubble("", 6, { failure: { raw: OVERLOADED, retryable: true } });
@@ -243,4 +246,3 @@ check("a streaming entry is left out, unless its message already ended in omp", 
   assert.equal(merged[1], ended[1]);
 });
 
-console.log(`test-transcript-merge: ${passed} checks passed`);

@@ -73,17 +73,27 @@
    *  A streaming entry has a copy only if its message ended while its frames
    *  were lost (omp adds a message to the context at `message_end`): that
    *  copy takes its place. Any other streaming entry is left out — the
-   *  caller re-appends its streaming bubble. */
+   *  caller re-appends its streaming bubble.
+   *  Tool cards match on the omp tool call id (`_toolCallId`), not `ts` —
+   *  a card has none — and a matched card keeps the live copy: the frames
+   *  carried what the persisted message cannot rebuild. */
+  // A live tool card and its restored get_messages copy (adapter.js rebuilds
+  // cards from omp's persisted toolCall blocks) meet on the omp tool call id
+  // both carry — a card has no message `ts` to match on.
+  function toolKey(m) {
+    return m?.kind === "tool" && typeof m._toolCallId === "string" ? `tool:${m._toolCallId}` : null;
+  }
+
   function mergeTranscript(live, persisted, { trimmed = false } = {}) {
     const slots = new Map(); // key → indices into `persisted`, in omp's order
     persisted.forEach((p, i) => {
-      const key = messageKey(p);
+      const key = messageKey(p) ?? toolKey(p);
       if (!key) return;
       const queue = slots.get(key);
       if (queue) queue.push(i);
       else slots.set(key, [i]);
     });
-    const copyOf = live.map(m => slots.get(messageKey(m))?.shift() ?? -1);
+    const copyOf = live.map(m => slots.get(messageKey(m) ?? toolKey(m))?.shift() ?? -1);
     const claimed = new Set(copyOf);
     const first = Math.min(...copyOf.filter(i => i !== -1));
     // Indices into `persisted`, in order, that no live entry stands for.
@@ -119,7 +129,9 @@
         continue;
       }
       flush(i);
-      merged.push(_withLiveFields(persisted[i], m));
+      // A matched tool card keeps the live one: the frames carried what the
+      // persisted message cannot rebuild (diffs, eval cells, output tails).
+      merged.push(m.kind === "tool" ? m : _withLiveFields(persisted[i], m));
     }
     flush(Infinity);
     // The prompts in flight have no copy and are never streaming.

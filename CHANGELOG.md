@@ -6,9 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Tool calls survive a restart, a resume or frames lost in the background: reopening a session now rebuilds each tool card from omp's persisted transcript (command/path title, output summary, error flag) instead of showing only the text bubbles; live cards keep their richer frames content where both exist.
+
 ### Added
 
 - Settings → Intelligence: omp's per-profile Intelligence settings move into the desktop — compaction details (mid-turn, continue-after, method order), memory (backend, Mnemopi scope and auto-recall/retain), autolearn, retry details (attempts, model fallback) and the model-role editor (including `advisor`), read and written through allowlisted `omp config` keys (`intelligence_settings_get`/`_set`) so desktop-owned toggles (auto-compaction, auto-retry, approval mode, thinking) stay the only source of theirs. Details that only apply while the desktop's own toggles are on say so.
+- Live todo plan as one capsule pinned above the composer: the tab's current todo phases (already feeding the plan kanban) show as a single pill with done/total, the task in progress and a mini progress bar, capped at 860px; clicking it opens the plan kanban. The pill hides while the tab has no plan.
 - The files panel's file rows have a right-click menu: reference the file into the composer (`@path`, appended with the whitespace context omp's mention parsing wants), copy the project-relative path, or reveal the file in the OS file manager (`explorer /select` on Windows, `open -R` on macOS, the folder on Linux). A row git marks deleted takes only Copy; a failed reveal stays open and shows the reason.
 
 ### Changed

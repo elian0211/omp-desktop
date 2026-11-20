@@ -227,6 +227,10 @@
        live.js reads it at its top-level init, so it must load before all
        of them. -->
   <script src="app/goal.js"></script>
+  <!-- Plan pill above the composer: pure summary over the kanban shape
+       live.js builds from omp's todo phases. Dependency-free IIFE;
+       design/chat/plan-pill.jsx looks it up at render time. -->
+  <script src="app/plan-pill.js"></script>
   <!-- Settings → Intelligence: pure row↔snapshot mapping, option tables
        and defaults. Dependency-free IIFE; app/use-intelligence.jsx and
        design/settings/rows-intelligence.jsx destructure/look it up. -->
@@ -384,6 +388,7 @@
   <script type="text/babel" src="design/chat/retry-row.jsx"></script>
   <script type="text/babel" src="design/chat/goal-row.jsx"></script>
   <script type="text/babel" src="design/chat/approval-row.jsx"></script>
+  <script type="text/babel" src="design/chat/plan-pill.jsx"></script>
   <script type="text/babel" src="design/chat/chat-view.jsx"></script>
   <!-- Subagent manager UI. bits → controls → inspector (destructures the
        controls) → pane (destructures the inspector) → rail card; all before
