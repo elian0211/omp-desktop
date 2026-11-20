@@ -18,6 +18,7 @@ const { Icon: _FP_Icon, CopyButton: _FP_Copy, useModalLayer: _FP_useModalLayer }
 const {
   highlightLines: _FP_highlight, clipLines: _FP_clip,
   inRange: _FP_inRange, MAX_LINES: _FP_MAX_LINES, MAX_LINE_CHARS: _FP_MAX_LINE_CHARS,
+  shouldReveal: _FP_shouldReveal, REVEAL_INITIAL: _FP_REVEAL_INITIAL, REVEAL_CHUNK: _FP_REVEAL_CHUNK,
 } = window.OMP_FILE_PREVIEW;
 const { formatBytes: _FP_size } = window.OMP_UPDATER;
 const { toDataUrl: _FP_toDataUrl } = window.OMP_IMAGES;
@@ -35,18 +36,40 @@ const FILE_STATES = {
 };
 
 // Memoised: a re-render of the head (a copy click) must not rebuild every row.
+// Rows render lazily in chunks (OMP_FILE_PREVIEW scroll reveal): the text is
+// fully in memory, only the DOM is built as the scroller approaches the end.
 const _FP_TextBody = React.memo(function _FP_TextBody({ path, text, range }) {
   const lines = React.useMemo(() => _FP_highlight(path, text, window.hljs), [path, text]);
   const bodyRef = React.useRef(null);
+  const applied = React.useRef(null);
+  const [shown, setShown] = React.useState(_FP_REVEAL_INITIAL);
+  React.useEffect(() => { setShown(_FP_REVEAL_INITIAL); }, [path]);
+  const extend = React.useCallback(() => {
+    const sc = bodyRef.current?.parentElement;
+    if (shown < lines.length && _FP_shouldReveal(sc)) setShown(Math.min(shown + _FP_REVEAL_CHUNK, lines.length));
+  }, [shown, lines.length]);
+  React.useEffect(() => {
+    const sc = bodyRef.current?.parentElement;
+    if (!sc) return undefined;
+    sc.addEventListener("scroll", extend, { passive: true });
+    return () => sc.removeEventListener("scroll", extend);
+  }, [extend]);
   React.useLayoutEffect(() => {
-    if (!range) return;
-    const row = bodyRef.current?.querySelector(`[data-ln="${Math.max(1, range.from - _FP_LEAD_LINES)}"]`);
-    row?.scrollIntoView({ block: "start" });
-  }, [lines, range]);
+    if (!range) { applied.current = null; return; }
+    if (applied.current === range) return;
+    const want = Math.max(1, range.from - _FP_LEAD_LINES);
+    // A target below the rendered window: reveal up to it first, the next
+    // pass (shown changed) finds the row and scrolls to it.
+    if (want > shown) { setShown(Math.min(lines.length, want + _FP_REVEAL_CHUNK)); return; }
+    const row = bodyRef.current?.querySelector(`[data-ln="${want}"]`);
+    if (!row) return;
+    row.scrollIntoView({ block: "start" });
+    applied.current = range;
+  }, [lines, range, shown, lines.length]);
   const single = range?.to === range?.from;
   return (
     <div className="fp-lines mono hljs selectable" ref={bodyRef}>
-      {lines.map((html, i) => {
+      {lines.slice(0, shown).map((html, i) => {
         const n = i + 1;
         const hot = _FP_inRange(n, range) ? (single ? " is-target" : " is-read") : "";
         return (
@@ -152,7 +175,7 @@ function FilePreview({ target, onClose, onOpenGit, onComment }) {
           </span>
           {clip && <span className="chip muted mono">{clip.total} {OMP_TR("lines")}</span>}
           {clip?.truncated && (
-            <span className="chip warn mono" title={OMP_TR("Shown: the first {n} lines, each cut at {m} characters", { n: _FP_MAX_LINES, m: _FP_MAX_LINE_CHARS })}>{OMP_TR("truncated")}</span>
+            <span className="chip warn mono" title={OMP_TR("Keep scrolling: the rest loads as you go (up to {n} lines); each line cut at {m} characters.", { n: _FP_MAX_LINES, m: _FP_MAX_LINE_CHARS })}>{OMP_TR("truncated")}</span>
           )}
           {value && value.kind !== "Missing" && value.kind !== "Outside" && <span className="chip muted mono">{_FP_size(value.size)}</span>}
           {value?.kind === "Text" && range && (

@@ -91,6 +91,18 @@ pub enum StatusKind {
     Deleted,
     Renamed,
     Untracked,
+    /// Not a change: an ignored path, shown only when the status tree asks
+    /// for all files (`allFiles`).
+    Ignored,
+}
+
+impl StatusKind {
+    /// Whether this kind marks a change against the comparison base.
+    /// `Ignored` is only a marker for the all-files tree and must not
+    /// count towards any directory's `changed`.
+    pub const fn is_change(self) -> bool {
+        !matches!(self, Self::Ignored)
+    }
 }
 
 /// One node of a folded file tree. Directories list their sub-directories

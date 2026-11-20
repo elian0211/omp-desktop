@@ -20,7 +20,8 @@
 }
 .fp-panel {
   width: min(1100px, 88vw); height: min(800px, 86vh);
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 10px;
   background: var(--bg-surface);
   border: 1px solid var(--line-bright);
   border-radius: var(--r-3);
@@ -32,8 +33,7 @@
 
 .fp-head {
   display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px 10px 16px;
-  border-bottom: 1px solid var(--line);
+  padding: 8px 10px 8px 14px;
   font-size: var(--d-text-sm);
 }
 .fp-crumb { color: var(--fg-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -43,19 +43,48 @@
 .fp-head .btn { white-space: nowrap; }
 .fp-copy { position: static; opacity: 1; }
 
-.fp-body { flex: 1; min-height: 0; overflow: auto; background: var(--bg-input); }
-/* The code keeps a dark surface in every theme, as chat code blocks do
-   (platform.css .code-block): highlight-theme.css's colours are dark-theme
-   colours. `.fp-body` stays themed for the states and images. Sized to the
-   longest line so the surface follows a horizontal scroll. */
-.fp-lines.hljs {
-  background: #1a1d23;
-  min-height: 100%; min-width: 100%; width: max-content; box-sizing: border-box;
-  padding: 8px 0 24px; font-size: var(--d-text-sm); line-height: 1.6;
+/* The body is an inset card: the scrollbars (horizontal included) sit
+   inside the panel with a margin, never flush against its edge. */
+.fp-body {
+  flex: 1; min-height: 0; overflow: auto;
+  background: var(--bg-input);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
-.fp-line { display: grid; grid-template-columns: 56px 1fr; white-space: pre; }
-.fp-ln { text-align: right; padding-right: 14px; color: #5c6370; user-select: none; }
+/* The code surface follows the theme (--code-bg, --syntax-*: both themes
+   ship a set), so it never reads as a foreign dark block on a light theme. */
+.fp-lines.hljs {
+  background: var(--code-bg);
+  color: var(--fg-2);
+  min-height: 100%; min-width: 100%; width: max-content; box-sizing: border-box;
+  padding: 8px 16px 24px 0; font-size: var(--d-text-sm); line-height: 1.6;
+}
+.fp-line { display: grid; grid-template-columns: 44px 1fr; white-space: pre; }
+/* The gutter is a distinct strip with a hairline at its right edge, so
+   line numbers never read as content. */
+.fp-ln {
+  text-align: right; padding-right: 10px;
+  color: var(--fg-4); user-select: none;
+  background: var(--code-gutter-bg);
+  box-shadow: inset -1px 0 0 var(--line);
+}
 .fp-code { padding-right: 16px; }
+
+/* Syntax tokens use the theme's --syntax-* palette instead of
+   highlight-theme.css's fixed one-dark colours. */
+.fp-lines .hljs-comment, .fp-lines .hljs-quote { color: var(--syntax-comment); }
+.fp-lines .hljs-doctag, .fp-lines .hljs-keyword { color: var(--syntax-key); }
+.fp-lines .hljs-deletion, .fp-lines .hljs-name, .fp-lines .hljs-section,
+.fp-lines .hljs-selector-tag, .fp-lines .hljs-subst { color: var(--syntax-tag); }
+.fp-lines .hljs-literal { color: var(--syntax-fn); }
+.fp-lines .hljs-addition, .fp-lines .hljs-attribute, .fp-lines .hljs-meta .hljs-string,
+.fp-lines .hljs-regexp, .fp-lines .hljs-string { color: var(--syntax-str); }
+.fp-lines .hljs-attr, .fp-lines .hljs-number, .fp-lines .hljs-selector-attr,
+.fp-lines .hljs-selector-class, .fp-lines .hljs-selector-pseudo,
+.fp-lines .hljs-template-variable, .fp-lines .hljs-type, .fp-lines .hljs-variable { color: var(--syntax-num); }
+.fp-lines .hljs-bullet, .fp-lines .hljs-link, .fp-lines .hljs-meta,
+.fp-lines .hljs-selector-id, .fp-lines .hljs-symbol, .fp-lines .hljs-title { color: var(--syntax-fn); }
+.fp-lines .hljs-built_in, .fp-lines .hljs-class .hljs-title, .fp-lines .hljs-title.class_ { color: var(--syntax-num); }
 .fp-line.is-read { background: color-mix(in oklab, var(--accent) 7%, transparent); }
 .fp-line.is-read .fp-ln { color: var(--accent); box-shadow: inset -2px 0 0 color-mix(in oklab, var(--accent) 60%, transparent); }
 .fp-line.is-target { background: color-mix(in oklab, var(--amber) 14%, transparent); }

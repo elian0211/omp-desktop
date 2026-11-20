@@ -2,7 +2,7 @@
    (docs/architecture/file-comments.md): per tab, the marks (explain or
    comment on lines of a project file, kept in OMP_BROWSER's chip store
    through OMP_FILE_COMMENTS) and the view (selected file, scroll target,
-   expanded dirs, filter, tree shown, commented-only); for the shown tab,
+   expanded dirs, filter, commented-only); for the shown tab,
    the git browser's status tree cut to the tab's folder, the selected
    file's text and, in a folder without git, the @-mention search hits.
 
@@ -20,9 +20,9 @@ const _UFC_NO_PROJECT = "this tab has no project folder";
 const _UFC_SEARCH_LIMIT = 50;
 const _UFC_SEARCH_DELAY_MS = 120;
 const _UFC_VIEW = Object.freeze({
-  selected: null, target: null, expanded: Object.freeze(new Set()), filter: "",
-  treeOpen: true, changedOnly: false, commentedOnly: false,
-});
+    selected: null, target: null, expanded: Object.freeze(new Set()), filter: "",
+    changedOnly: false, allFiles: false, commentedOnly: false, scope: "folder",
+  });
 let _ufcSeq = 0;
 // Folder names compare without case where the file system does (Windows,
 // macOS): there the folder's case on disk may differ from the git index's.
@@ -38,7 +38,6 @@ const _ufcResult = (res) => {
 function useFileComments({ bridge, tabId, sessionIds, open, setOpen, project, edits }) {
   const [marksAll, setMarks] = React.useState(window.OMP_BROWSER.EMPTY);
   const [views, setViews] = React.useState({});
-  const [fullView, setFullView] = React.useState(false);
   const [nonce, setNonce] = React.useState(0);
   const [status, setStatus] = React.useState({ key: null, value: null, error: null });
   const [file, setFile] = React.useState({ key: null, value: null, error: null });
@@ -51,8 +50,6 @@ function useFileComments({ bridge, tabId, sessionIds, open, setOpen, project, ed
     setMarks(s => _UFC_prune(s, ids));
     setViews(m => _UFC_prune(m, ids));
   }, [idsKey]);
-  // Leaving the panel leaves full view.
-  React.useEffect(() => { if (!open) setFullView(false); }, [open]);
 
   const view = _UFC_entryOf(views, tabId, _UFC_VIEW);
   const patchView = React.useCallback(
@@ -60,12 +57,13 @@ function useFileComments({ bridge, tabId, sessionIds, open, setOpen, project, ed
 
   const folder = project.path || null;
   const repoRoot = project.repoRoot || null;
-  const tick = `${project.branch ?? ""}\0${edits}\0${nonce}`;
+  // `allFiles` is in the tick so flipping the ignored-paths toggle refetches.
+  const tick = `${project.branch ?? ""}\0${edits}\0${nonce}\0${view.allFiles}`;
 
   React.useEffect(() => {
     if (!open || !folder) return undefined;
     let live = true;
-    bridge.gitBrowserStatus().then(res => { if (live) setStatus({ key: folder, ..._ufcResult(res) }); });
+    bridge.gitBrowserStatus(view.allFiles).then(res => { if (live) setStatus({ key: folder, ..._ufcResult(res) }); });
     return () => { live = false; };
   }, [bridge, open, folder, tick]);
 
@@ -130,8 +128,9 @@ function useFileComments({ bridge, tabId, sessionIds, open, setOpen, project, ed
         return { expanded: next };
       }),
       setFilter: filter => patchView(() => ({ filter })),
-      setTreeOpen: treeOpen => patchView(() => ({ treeOpen })),
+      setScope: scope => patchView(() => ({ scope })),
       setChangedOnly: changedOnly => patchView(() => ({ changedOnly })),
+      setAllFiles: allFiles => patchView(() => ({ allFiles })),
       setCommentedOnly: on => patchView(() => ({ commentedOnly: on })),
       /** Opens the panel on `path` (absolute inside the folder, or relative
        *  to it) and, with `range` ({ from, to }), scrolls to those lines and
@@ -160,7 +159,7 @@ function useFileComments({ bridge, tabId, sessionIds, open, setOpen, project, ed
   }, [patchView, folder, tabId, setOpen]);
 
   return {
-    open, fullView, setFullView, hasFolder: !!folder,
+    open, hasFolder: !!folder, repoTree, repoRoot, scope: view.scope,
     view, expanded, searchMode,
     tree: searchMode ? searchTree : shownTree,
     treeError: searchMode ? null

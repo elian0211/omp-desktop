@@ -691,7 +691,7 @@ mod tests {
         // and has to hash the file, so it is a reader of its own.
         repo.write("a.txt", "uno\n");
 
-        status(repo.path()).expect("status");
+        status(repo.path(), false).expect("status");
         assert!(!marker.exists(), "status ran the repository's clean filter");
         let out = file(repo.path(), "a.txt").expect("file");
         assert!(!marker.exists(), "the repository's clean filter ran");

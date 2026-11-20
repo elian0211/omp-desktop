@@ -22,7 +22,7 @@
 (function () {
   "use strict";
 
-  const shows = (node, changedOnly) => !changedOnly || (node.dir ? node.changed > 0 : Boolean(node.status));
+  const shows = (node, changedOnly) => !changedOnly || (node.dir ? node.changed > 0 : Boolean(node.status) && node.status !== "Ignored");
 
   /** Rows a tree view renders: `[{ node, depth }]` in display order. A
    *  directory's children follow it when it is in `expanded` (a Set of

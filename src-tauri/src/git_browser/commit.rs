@@ -84,7 +84,7 @@ pub fn commit(path: &Path, sha: &str) -> Result<CommitView, String> {
     });
     let files: Vec<_> = touched.by_ref().take(MAX_FILES).collect();
     let truncated = touched.next().is_some();
-    let tree = status::fold(files);
+    let tree = status::fold(files, Vec::new());
 
     let decoded = commit.decode().map_err(fail("failed to decode commit"))?;
     let author = decoded.author().map_err(fail("failed to decode author"))?;

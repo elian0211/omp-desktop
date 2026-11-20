@@ -182,8 +182,20 @@
     return !!range && n >= range.from && n <= range.to;
   }
 
+  // ── Scroll reveal ─────────────────────────────────────────────────
+  // The 20k-line cap is a render guard, not a read cap: Rust already hands
+  // back the whole text (≤ 1 MiB), so the rows render lazily in chunks as
+  // the scroller nears its bottom, and "truncated" only means "keep
+  // scrolling / per-line character cut".
+  const REVEAL_INITIAL = 800;
+  const REVEAL_CHUNK = 800;
+  /** Whether the scroller is within a chunk of its bottom. */
+  function shouldReveal(el) {
+    return !!el && el.scrollTop + el.clientHeight >= el.scrollHeight - 800;
+  }
+
   window.OMP_FILE_PREVIEW = {
     readTarget, linkTarget, linkClick, inProject, language, splitHighlighted, clipLines, highlightLines, inRange,
-    HIGHLIGHT_MAX_CHARS, MAX_LINES, MAX_LINE_CHARS,
+    shouldReveal, REVEAL_INITIAL, REVEAL_CHUNK, HIGHLIGHT_MAX_CHARS, MAX_LINES, MAX_LINE_CHARS,
   };
 })();

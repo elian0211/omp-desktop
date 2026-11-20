@@ -84,6 +84,7 @@ const GitBrowser = React.memo(function GitBrowser({ bridge, onClose, initialPath
             <_GB_Tree root={g.tree} error={g.commitError}
               expanded={g.expanded} onToggle={g.toggleDir} selected={g.selected} onSelect={g.select}
               changedOnly={inCommit || g.changedOnly} onChangedOnly={inCommit ? null : g.setChangedOnly}
+              allFiles={inCommit ? null : { on: g.allFiles, onToggle: g.setAllFiles }}
               filter={g.filter} onFilter={g.setFilter} changedCount={changed}
               commit={g.commit} truncated={g.truncated} />
             <_GB_View path={g.selected} file={g.file} error={g.fileError} commit={g.commit}

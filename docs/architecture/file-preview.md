@@ -34,7 +34,7 @@ A range is `{ from, to }`, 1-based and inclusive; one line and an open-ended sta
 
 ## Rendering (`chat/file-preview.jsx`)
 
-- `clipLines` cuts the text to the git browser's caps (`MAX_LINES` 20 000, `MAX_LINE_CHARS` 500) before anything is highlighted or rendered, and the header shows a `truncated` chip. The line-count chip keeps the file's full count.
+- `clipLines` cuts the text to the git browser's caps (`MAX_LINES` 20 000, `MAX_LINE_CHARS` 500) before anything is highlighted or rendered, and the header shows a `truncated` chip: keep scrolling and the rest of the cut text renders in chunks (OMP_FILE_PREVIEW's scroll reveal — the cap is a render guard, the ≤ 1 MiB text is fully in memory; rows past 20 000 lines and the per-line character cut are not retrievable). The line-count chip keeps the file's full count.
 - `highlightLines` (`app/file-preview.js`, shared with the files panel) runs hljs on files up to `HIGHLIGHT_MAX_CHARS` (256 KiB) when `language()` finds a registered language. Larger files, or files in an unknown language, show as escaped plain text. `splitHighlighted` cuts hljs output into lines, closing open spans at the end of each line and reopening them on the next, so a block comment keeps its colour across lines.
 - The code sits on a fixed dark surface in every theme, like chat code blocks: the hljs theme's colours are dark-theme colours.
 - A range of several lines is tinted (`is-read`); a single line or an open-ended start (`:50`) is marked as the target (`is-target`). The rows are a memoised component, so a re-render of the head (the copy button's flash) does not rebuild them. On load the view scrolls so the range starts four lines from the top.

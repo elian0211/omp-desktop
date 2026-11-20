@@ -2,7 +2,7 @@
 
 A full-window overlay (`.gitb-scrim` / `.gitb`) over the active tab's project, with three panes:
 
-- **files** — the project tree with git status marks, a "N changed" toggle that limits the tree to changed files, and a name filter;
+- **files** — the project tree with git status marks, a "N changed" toggle that limits the tree to changed files, an "all files" toggle that adds the ignored paths (marked `×`, `Ignored`), and a name filter;
 - **file** — the whole selected file with its change inline: removed lines in place, added lines highlighted, old and new line numbers, ↑↓ between hunks, stage / discard, copy diff;
 - **history** — the commit graph of every ref (`--all`, topological), with lanes, a synthetic working-tree row on top and HEAD / branch / remote / tag badges.
 
@@ -41,7 +41,7 @@ Stage, discard and the branch switch (`workspace_accept`/`workspace_reject`/`wor
 ### Commands and payloads
 
 ```
-git_browser_status(path) -> StatusView
+git_browser_status(path, allFiles?) -> StatusView
   StatusView { repo: RepoInfo, tree: TreeNode, changed: u32, truncated: bool,
                folder: Option<String> /* `path` relative to the work dir, both canonicalised, "/"-separated, "" = the work dir; None = unresolvable (the files panel's cut, file-comments.md) */ }
   RepoInfo   { name /* work dir basename */, branch: Option<String> /* short; None = detached */,
@@ -49,7 +49,7 @@ git_browser_status(path) -> StatusView
   TreeNode   { name, path /* project-relative, "/"-separated, "" for the root */, dir: bool,
                status: Option<StatusKind>, changed: u32 /* changed files below a dir; 0 for files */,
                children: Vec<TreeNode> /* dirs first, then files, each alphabetical; empty for files */ }
-  StatusKind = "Modified" | "Added" | "Deleted" | "Renamed" | "Untracked"   (git_browser::StatusKind)
+  StatusKind = "Modified" | "Added" | "Deleted" | "Renamed" | "Untracked" | "Ignored"   (git_browser::StatusKind)
 
 git_browser_file(path, relPath) -> FileView
   FileView { path /* normalised, project-relative */, kind: "Text" | "Binary" | "Missing" | "TooLarge",
@@ -81,7 +81,6 @@ The webview sends a project path, a file path, a sha and a branch name — never
 ### Files and the status merge
 
 The file list is the index entries (tracked files; a file deleted in the worktree is still in the index and is listed as `Deleted`) plus the untracked files from gix status (`UntrackedFiles::Files`, excludes honoured, so ignored files never appear). Status is HEAD vs worktree, merged per path from both layers (HEAD → index, index → worktree):
-
 | Per path | `status` |
 |---|---|
 | untracked | `Untracked` |
@@ -90,6 +89,8 @@ The file list is the index entries (tracked files; a file deleted in the worktre
 | rewrite / rename in either layer | `Renamed`, on the **new** path |
 | any other change in either layer, conflicts included | `Modified` |
 | unchanged | `None` |
+
+With `allFiles`, the tree also carries the ignored paths, from a gix dirwalk (`repo.dirwalk`, `emit_ignored`): an ignored file is `Ignored`; an ignored **directory** is collapsed to the directory itself (`Ignored`, no children, never walked — its whole content is ignored, and this keeps a big `node_modules` to one row). `Ignored` is a marker, not a change: it never counts towards a directory's `changed`, never appears under the changed-only filter, and is not selectable for stage/discard. Ignored paths fill the `MAX_FILES` cap last, so under the cap they are dropped first. Both the git browser and the files panel pass `allFiles` from their own toggle; without it the tree stays as before.
 
 Rename detection between HEAD and the index follows the repo's config (`status.renames` / `diff.renames`, on unless the user turned it off); between the index and the work tree there is none, as in `git status`, so an unstaged `mv` shows the old path as `Deleted` and the new one as `Untracked`. A detected rename shows only on its new path; the old path is not in the tree.
 
@@ -135,7 +136,7 @@ Reads go through gix (0.87, default features: `status`, `blob-diff`, `revision`,
 
 ### Bridge (`live.js`)
 
-`gitBrowserStatus()`, `gitBrowserFile(relPath)`, `gitBrowserLog()`, `gitBrowserCommit(sha)`, `gitBrowserCommitFile(sha, relPath)`, `gitBranches()` and `gitSwitchBranch(name, remote)` invoke the commands with `{ path, relPath, sha, name, remote }`, `path` being `_activeProjectPath()`. Each resolves `{ ok: true, value }` or `{ ok: false, error }` (the Rust error string), and `null` when the tab has no project folder: errors are passed on, not swallowed into a fallback, so the overlay can show them. `workspaceAccept` / `workspaceReject` are the stage / discard calls.
+`gitBrowserStatus(allFiles)`, `gitBrowserFile(relPath)`, `gitBrowserLog()`, `gitBrowserCommit(sha)`, `gitBrowserCommitFile(sha, relPath)`, `gitBranches()` and `gitSwitchBranch(name, remote)` invoke the commands with `{ path, relPath, sha, name, remote }`, `path` being `_activeProjectPath()`. Each resolves `{ ok: true, value }` or `{ ok: false, error }` (the Rust error string), and `null` when the tab has no project folder: errors are passed on, not swallowed into a fallback, so the overlay can show them. `workspaceAccept` / `workspaceReject` are the stage / discard calls.
 
 ### Pure helpers (`app/git-browser.js`, `window.OMP_GIT_BROWSER`, `test-git-browser.mjs`)
 
@@ -154,7 +155,7 @@ Reads go through gix (0.87, default features: `status`, `blob-diff`, `revision`,
 
 ### Hook (`app/use-git-browser.jsx`, `window.useGitBrowser`)
 
-Mounted with the overlay as `useGitBrowser({ bridge, initialPath, branch, edits })` (`edits` = `finishedEdits(messages)`, counted by `app-live.jsx`). Returns `status`, `log`, `commitSha`, `commit`, `tree` and `truncated` (the status tree in worktree mode, the commit's in commit mode), `file`, `error`, `commitError`, `fileError`, `selected`, `expanded`, `changedOnly`, `filter` and the actions `select`, `toggleDir`, `setChangedOnly`, `setFilter`, `browse(sha | "@")`, `refresh`, `stage`, `discard`.
+Mounted with the overlay as `useGitBrowser({ bridge, initialPath, branch, edits })` (`edits` = `finishedEdits(messages)`, counted by `app-live.jsx`). Returns `status`, `log`, `commitSha`, `commit`, `tree` and `truncated` (the status tree in worktree mode, the commit's in commit mode), `file`, `error`, `commitError`, `fileError`, `selected`, `expanded`, `changedOnly`, `allFiles` (the ignored-paths toggle; in the tick, so flipping it refetches status), `filter` and the actions `select`, `toggleDir`, `setChangedOnly`, `setAllFiles`, `setFilter`, `browse(sha | "@")`, `refresh`, `stage`, `discard`.
 
 - **Mode** is `commitSha`: `null` for the working tree, else the browsed commit. No loading flags: a pane with no value and no error is loading. On open it fetches status and log, then the selected file (`initialPath`, else `firstFile`); a selection fetches `gitBrowserFile` in worktree mode and `gitBrowserCommitFile(sha, …)` in commit mode.
 - **Refresh**: status and the open working-tree file refetch when the active tab's `branch` changes (the bridge snapshot's `sessions[i].branch`, driven by `git://branch/{id}`), when an edit/write tool card finishes while the overlay is open (`edits` grows), after stage / discard, and on the refresh button; the log on a branch change and the refresh button only. A commit and its files are never refetched (a commit cannot change). A project change remounts the overlay (its `key`).
@@ -182,6 +183,7 @@ The active tab's branch is a pill in the status bar (`design/branch-menu.jsx`, `
 - Payload field names are camelCase on the wire (`relPath`, `truncated`, `changed`, …) and the hook reads them by name. A renamed Rust field or a missing `rename_all` breaks the overlay silently; change both sides together.
 - The `"@"` row: `id: "@"`, `short: ""`, `subject: ""`, `at: 0`, `parents: [head]`, absent when HEAD is unborn. The history pane selects worktree mode on it; code that treats every row as a commit (sha lookups, `relativeTime(0)`) must skip it.
 - The caps: 500 commits (`MAX_COMMITS`), 20 000 files (`MAX_FILES`) and 20 000 lines (`MAX_LINES`), 2 MiB per side (`MAX_SIDE_BYTES`, → `TooLarge`), 500 chars per line (`MAX_LINE_CHARS`), 12 lanes (`MAX_LANES`). They keep a large repo or file from freezing the webview; raise them only with a measurement.
+- `Ignored` is a marker, not a change: any count, filter or action that treats a `status` as a change must exclude it (`StatusKind::is_change` in Rust, `shows` in `app/git-browser.js`). An ignored directory is a collapsed leaf (no children, no expansion).
 - A rename is shown on its **new** path only, in both the worktree tree and a commit's tree; the old path is not a row. The file view diffs it against the rename **source**'s blob (`git_browser_file`: the HEAD blob at the source path of the HEAD → index rename; `git_browser_commit_file`: the source location from the tree diff), so a pure rename is all `ctx` and a rename plus edit shows only the edit. A copy (copy-detected rewrite) counts as `Added` and diffs against an empty side.
 - `truncated` is always shown when set (tree, file and history each carry it): a capped view must not look complete.
 - Reads stay in gix; adding a `git` subprocess to `git_browser/` reintroduces the PATH and output-parsing problems the cutover removed. Only `workspace::accept` / `reject` / `switch_branch` run `git`.

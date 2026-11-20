@@ -1,6 +1,7 @@
 //! `git_browser_status`: every tracked and untracked file of the work tree
 //! folded into a directory tree, each changed file marked with its change
-//! against `HEAD` (staged and unstaged in one), plus the repo header.
+//! against `HEAD` (staged and unstaged in one), plus the repo header — and,
+//! when asked for, every ignored path too, marked [`StatusKind::Ignored`].
 
 use super::{fail, open, StatusKind, TreeNode, MAX_FILES};
 use gix::bstr::ByteSlice as _;
@@ -67,6 +68,8 @@ const fn rank(kind: StatusKind) -> u8 {
         StatusKind::Deleted => 2,
         StatusKind::Renamed => 1,
         StatusKind::Modified => 0,
+        // Never in the merge: the dirwalk marks ignored paths directly.
+        StatusKind::Ignored => u8::MAX,
     }
 }
 
@@ -219,8 +222,52 @@ fn under(path: &str, prefix: &str) -> bool {
     }
 }
 
-/// `git_browser_status(path)`.
-pub fn status(path: &Path) -> Result<StatusView, String> {
+/// The ignored paths of the work tree, from gix's dirwalk: files and
+/// symlinks as themselves, an ignored directory collapsed to the directory
+/// (its whole content is ignored; not walked, so it stays cheap on a big
+/// `node_modules`). Returns `(file paths, dir paths)`, both work-dir-relative
+/// and `/`-separated. Only paths gix reports `Ignored` are kept — untracked
+/// and tracked ones come from [`changes`] and the index.
+fn ignored(
+    repo: &gix::Repository,
+    index: &gix::index::State,
+) -> Result<(BTreeMap<String, StatusKind>, Vec<String>), String> {
+    use gix::dir::entry::{Kind as DirKind, Status as DirStatus};
+    use gix::dir::walk::{delegate::Collect, EmissionMode};
+
+    let walk = repo
+        .dirwalk_options()
+        .map_err(fail("failed to read dirwalk options"))?
+        .emit_ignored(Some(EmissionMode::Matching));
+    let mut delegate = Collect::default();
+    let empty: [&str; 0] = [];
+    repo.dirwalk(
+        index,
+        empty,
+        &std::sync::atomic::AtomicBool::default(),
+        walk,
+        &mut delegate,
+    )
+    .map_err(fail("dirwalk failed"))?;
+    let mut files = BTreeMap::new();
+    let mut dirs = Vec::new();
+    for (entry, _) in delegate.into_entries_by_path() {
+        if !matches!(entry.status, DirStatus::Ignored(_)) {
+            continue;
+        }
+        let path = entry.rela_path.to_str_lossy().into_owned();
+        if entry.disk_kind.is_some_and(|k| k.is_dir()) {
+            dirs.push(path);
+        } else if matches!(entry.disk_kind, Some(DirKind::File | DirKind::Symlink)) {
+            files.insert(path, StatusKind::Ignored);
+        }
+    }
+    Ok((files, dirs))
+}
+
+/// `git_browser_status(path)` — `all_files` adds the ignored paths as
+/// [`StatusKind::Ignored`] (files, and collapsed ignored directories).
+pub fn status(path: &Path, all_files: bool) -> Result<StatusView, String> {
     let (_gate, repo, work_dir) = open(path)?;
     let changes = changes(&repo)?;
     let index = repo
@@ -242,14 +289,30 @@ pub fn status(path: &Path) -> Result<StatusView, String> {
             .iter()
             .map(|e| e.path(&index).to_str_lossy())
     };
-    let (files, truncated) = listed(
+    let (mut files, mut truncated) = listed(
         changes.kinds,
         tracked()
             .filter(|p| inside(p))
             .chain(tracked().filter(|p| !inside(p))),
         MAX_FILES,
     );
-    let tree = fold(files);
+    // Ignored paths fill the remaining cap last: the cap drops them first
+    // (changed files, then tracked ones, are kept — the status marks that
+    // matter never fall away).
+    let ignored_dirs = if all_files {
+        let (ignored_files, dirs) = ignored(&repo, &index)?;
+        for (p, kind) in ignored_files {
+            if files.len() >= MAX_FILES {
+                truncated = true;
+                break;
+            }
+            files.entry(p).or_insert(Some(kind));
+        }
+        dirs
+    } else {
+        Vec::new()
+    };
+    let tree = fold(files, ignored_dirs);
     let head = repo.head_id().ok().map(gix::Id::detach);
     let head_name = repo.head_name().map_err(fail("failed to read HEAD"))?;
     let (ahead, behind) = match (head, &head_name) {
@@ -280,6 +343,9 @@ pub fn status(path: &Path) -> Result<StatusView, String> {
 struct Dir {
     dirs: BTreeMap<String, Self>,
     files: BTreeMap<String, Option<StatusKind>>,
+    /// Set when this directory itself is an ignored one collapsed by the
+    /// dirwalk (shown with [`StatusKind::Ignored`], never expanded).
+    ignored: bool,
 }
 
 impl Dir {
@@ -301,6 +367,19 @@ impl Dir {
         }
     }
 
+    /// Like [`Dir::insert`] for an ignored directory's own path.
+    fn insert_ignored_dir(&mut self, path: &str) {
+        if let Some((head, rest)) = path.split_once('/') {
+            self.dirs
+                .entry(head.to_string())
+                .or_default()
+                .insert_ignored_dir(rest);
+        } else {
+            let dir = self.dirs.entry(path.to_string()).or_default();
+            dir.ignored = true;
+        }
+    }
+
     fn into_node(self, name: String, path: String) -> TreeNode {
         let mut children = Vec::with_capacity(self.dirs.len() + self.files.len());
         let mut changed = 0u32;
@@ -311,7 +390,7 @@ impl Dir {
             children.push(node);
         }
         for (name, status) in self.files {
-            changed += u32::from(status.is_some());
+            changed += u32::from(status.is_some_and(StatusKind::is_change));
             children.push(TreeNode {
                 path: join(&path, &name),
                 name,
@@ -325,7 +404,7 @@ impl Dir {
             name,
             path,
             dir: true,
-            status: None,
+            status: self.ignored.then_some(StatusKind::Ignored),
             changed,
             children,
         }
@@ -342,11 +421,20 @@ fn join(dir: &str, name: &str) -> String {
 
 /// Fold `/`-separated project-relative file paths into a tree rooted at
 /// `""`: directories first, then files, each in byte order; every
-/// directory's `changed` counts the files with a status below it.
-pub(super) fn fold(files: impl IntoIterator<Item = (String, Option<StatusKind>)>) -> TreeNode {
+/// directory's `changed` counts the files with a change below it.
+/// `ignored_dirs` are paths of ignored directories collapsed by the
+/// dirwalk: they become empty child dirs whose `status` is
+/// [`StatusKind::Ignored`].
+pub(super) fn fold(
+    files: impl IntoIterator<Item = (String, Option<StatusKind>)>,
+    ignored_dirs: Vec<String>,
+) -> TreeNode {
     let mut root = Dir::default();
     for (path, status) in files {
         root.insert(&path, status);
+    }
+    for path in ignored_dirs {
+        root.insert_ignored_dir(&path);
     }
     root.into_node(String::new(), String::new())
 }
@@ -465,14 +553,17 @@ mod tests {
 
     #[test]
     fn fold_puts_dirs_first_then_files_and_counts_changes() {
-        let tree = fold([
-            ("z.txt".to_string(), None),
-            ("src/b.rs".to_string(), Some(StatusKind::Modified)),
-            ("src/a/x.rs".to_string(), Some(StatusKind::Added)),
-            ("src/a/y.rs".to_string(), None),
-            ("a.txt".to_string(), Some(StatusKind::Untracked)),
-            ("docs/readme.md".to_string(), None),
-        ]);
+        let tree = fold(
+            [
+                ("z.txt".to_string(), None),
+                ("src/b.rs".to_string(), Some(StatusKind::Modified)),
+                ("src/a/x.rs".to_string(), Some(StatusKind::Added)),
+                ("src/a/y.rs".to_string(), None),
+                ("a.txt".to_string(), Some(StatusKind::Untracked)),
+                ("docs/readme.md".to_string(), None),
+            ],
+            Vec::new(),
+        );
         assert_eq!(tree.path, "");
         assert!(tree.dir);
         assert_eq!(names(&tree), ["docs", "src", "a.txt", "z.txt"]);
@@ -530,7 +621,7 @@ mod tests {
         repo.write("fresh/untracked.txt", "u\n");
         repo.write("ignored.log", "noise\n");
 
-        let view = status(repo.path()).expect("status");
+        let view = status(repo.path(), false).expect("status");
         let tree = &view.tree;
         assert_eq!(status_of(tree, "keep.txt"), None);
         assert!(
@@ -568,6 +659,40 @@ mod tests {
     }
 
     #[test]
+    fn status_all_files_lists_ignored_paths_and_counts_no_changes() {
+        let Some(repo) = fixture::init("status-all-files") else {
+            return;
+        };
+        repo.write("keep.txt", "k\n");
+        repo.write(".gitignore", "ignored.log\ndeps/\n");
+        repo.git(&["add", "."]);
+        repo.commit("base", 1_700_000_000);
+        repo.write("ignored.log", "noise\n");
+        std::fs::create_dir_all(repo.path().join("deps")).expect("create ignored dir");
+        repo.write("deps/lib.js", "x\n");
+
+        let plain = status(repo.path(), false).expect("status");
+        assert!(
+            find(&plain.tree, "ignored.log").is_none() && find(&plain.tree, "deps").is_none(),
+            "ignored paths stay out without allFiles"
+        );
+
+        let view = status(repo.path(), true).expect("status");
+        let tree = &view.tree;
+        assert_eq!(status_of(tree, "ignored.log"), Some(StatusKind::Ignored));
+        assert_eq!(status_of(tree, "keep.txt"), None);
+        assert_eq!(status_of(tree, "deps"), Some(StatusKind::Ignored));
+        let deps = find(tree, "deps").expect("deps node");
+        assert!(
+            deps.dir && deps.children.is_empty(),
+            "collapsed, not walked"
+        );
+        assert_eq!(tree.changed, 0, "ignored paths are no changes");
+        assert_eq!(view.changed, 0);
+        assert!(!view.truncated);
+    }
+
+    #[test]
     fn status_works_on_an_unborn_head_and_from_a_subdirectory() {
         let Some(repo) = fixture::init("status-unborn") else {
             return;
@@ -576,7 +701,7 @@ mod tests {
         repo.git(&["add", "."]);
         repo.write("sub/b.txt", "b\n");
 
-        let view = status(&repo.path().join("sub")).expect("status");
+        let view = status(&repo.path().join("sub"), false).expect("status");
         assert_eq!(view.repo.head, None);
         assert_eq!(view.repo.branch.as_deref(), Some("main"));
         assert_eq!(view.folder.as_deref(), Some("sub"));
@@ -595,7 +720,7 @@ mod tests {
         let first = repo.commit("one", 1_700_000_000);
         repo.commit("two", 1_700_000_100);
         repo.git(&["checkout", "-q", "--detach", &first]);
-        let view = status(repo.path()).expect("status");
+        let view = status(repo.path(), false).expect("status");
         assert_eq!(view.folder.as_deref(), Some(""));
         assert_eq!(view.repo.branch, None);
         assert_eq!(view.repo.head.as_deref(), Some(first.as_str()));
@@ -630,7 +755,7 @@ mod tests {
         let on_disk = std::fs::read_to_string(&checkout).expect("read checkout");
         outer.write("sub/a.txt", &on_disk.replace("one", "uno"));
 
-        let view = status(outer.path()).expect("status");
+        let view = status(outer.path(), false).expect("status");
         assert!(!marker.exists(), "the submodule's clean filter ran");
         assert_eq!(
             status_of(&view.tree, "sub"),
@@ -652,7 +777,7 @@ mod tests {
             "-m",
             "moved",
         ]);
-        let view = status(outer.path()).expect("status");
+        let view = status(outer.path(), false).expect("status");
         assert_eq!(status_of(&view.tree, "sub"), Some(StatusKind::Modified));
     }
 
@@ -664,7 +789,7 @@ mod tests {
         // The temp dir itself could sit inside a repo on odd setups; only
         // assert when discovery genuinely fails.
         if gix::discover(&dir).is_err() {
-            let err = status(&dir).expect_err("not a repo");
+            let err = status(&dir, false).expect_err("not a repo");
             assert!(err.starts_with("not a git repository"), "{err}");
         }
         std::fs::remove_dir_all(&dir).ok();

@@ -23,7 +23,10 @@
    file has up to 20 000 rows; every prop is a stable reference.
    ═════════════════════════════════════════════════════════════════════ */
 const { Icon: _FC_Icon } = window;
-const { highlightLines: _FC_highlight } = window.OMP_FILE_PREVIEW;
+const {
+  highlightLines: _FC_highlight, shouldReveal: _FC_shouldReveal,
+  REVEAL_INITIAL: _FC_REVEAL_INITIAL, REVEAL_CHUNK: _FC_REVEAL_CHUNK,
+} = window.OMP_FILE_PREVIEW;
 const { isStale: _FC_isStale } = window.OMP_FILE_COMMENTS;
 
 // Lines kept above a target when scrolling to it (the preview's lead).
@@ -115,6 +118,20 @@ function FileCode({ path, text, marks, target, onAdd, onUpdate, onRemove, onTarg
   const linesRef = React.useRef(null);
   const anchor = React.useRef(null);
   const dragging = React.useRef(false);
+  // Rows render lazily in chunks as the scroller nears the bottom
+  // (OMP_FILE_PREVIEW scroll reveal); the text itself is fully in memory.
+  const [shown, setShown] = React.useState(_FC_REVEAL_INITIAL);
+  React.useEffect(() => { setShown(_FC_REVEAL_INITIAL); }, [path]);
+  const extend = React.useCallback(() => {
+    const sc = linesRef.current?.parentElement;
+    if (shown < html.length && _FC_shouldReveal(sc)) setShown(Math.min(shown + _FC_REVEAL_CHUNK, html.length));
+  }, [shown, html.length]);
+  React.useEffect(() => {
+    const sc = linesRef.current?.parentElement;
+    if (!sc) return undefined;
+    sc.addEventListener("scroll", extend, { passive: true });
+    return () => sc.removeEventListener("scroll", extend);
+  }, [extend]);
 
   const lineOf = (node) => {
     const el = node?.nodeType === 3 ? node.parentElement : node;
@@ -181,8 +198,12 @@ function FileCode({ path, text, marks, target, onAdd, onUpdate, onRemove, onTarg
   const done = React.useRef(null);
   React.useLayoutEffect(() => {
     if (!target || done.current === target.nonce) return;
+    const want = Math.max(1, target.from - _FC_LEAD_LINES);
+    // A target below the rendered window: reveal up to it first; the next
+    // pass (html unchanged, shown changed) finds the row and scrolls.
+    if (want > shown) { setShown(Math.min(html.length, want + _FC_REVEAL_CHUNK)); return; }
     done.current = target.nonce;
-    const row = linesRef.current?.querySelector(`[data-ln="${Math.max(1, target.from - _FC_LEAD_LINES)}"]`);
+    const row = linesRef.current?.querySelector(`[data-ln="${want}"]`);
     row?.scrollIntoView({ block: "start" });
     setForm(null);
     anchor.current = target.from;
@@ -192,7 +213,7 @@ function FileCode({ path, text, marks, target, onAdd, onUpdate, onRemove, onTarg
     // opener only then, and the focus must end in the code.
     requestAnimationFrame(focusCode);
     onTargetDone(target.nonce);
-  }, [target, html]);
+  }, [target, html, shown]);
 
   const stale = React.useMemo(() => new Set(marks.filter(m => _FC_isStale(m, raw)).map(m => m.id)), [marks, raw]);
   // Per line: the tint kind (a comment wins over an explain), the mark
@@ -285,7 +306,8 @@ function FileCode({ path, text, marks, target, onAdd, onUpdate, onRemove, onTarg
 
   const hot = form ?? pick;
   const rows = [];
-  for (let i = 0; i < html.length; i++) {
+  const shownLines = Math.min(html.length, shown);
+  for (let i = 0; i < shownLines; i++) {
     const n = i + 1;
     const k = lineInfo.kind.get(n);
     const cls = `${k ? ` has-${k}` : ""}${hot && n >= hot.from && n <= hot.to ? " is-picking" : ""}`;
@@ -302,7 +324,7 @@ function FileCode({ path, text, marks, target, onAdd, onUpdate, onRemove, onTarg
   }
 
   return (
-    <div className="fp-lines fc-lines mono hljs selectable" ref={linesRef} tabIndex={-1}
+    <div className={`fp-lines fc-lines mono hljs selectable${marks.length ? "" : " no-marks"}`} ref={linesRef} tabIndex={-1}
       onMouseDown={onMouseDown} onMouseOver={onMouseOver} onMouseUp={onMouseUp}>
       {rows}
       {pick && (

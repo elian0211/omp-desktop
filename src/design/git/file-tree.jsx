@@ -4,30 +4,33 @@
    toggle hidden and the head names the commit. Changed-only shows every
    directory open, so a directory row is inert there (the shared expansion
    set is the full tree's). Row logic is app/git-browser.js
-   (OMP_GIT_BROWSER).
+   (OMP_GIT_BROWSER). `onFileContext` fires for file **and folder** rows
+   (node, event) — the Files activity view's menu references folders too.
 
-   The files panel (design/files/) mounts it too, with five optional props:
+   The files panel (design/files/) mounts it too, with optional props:
    `badges` (Map path → count, a number after the file's name),
-   `commented` ({ count, on, onToggle }: a second head toggle), `searched`
-   (the root already holds the filter's hits: listed flat, unfiltered),
-   `emptyText` (the message for an empty list) and `onFileContext` (node,
-   event: a file row's right click; the git browser passes none, so it
-   keeps the native menu). */
+   `commented` ({ count, on, onToggle }: a head toggle), `allFiles`
+   ({ on, onToggle }: ignored paths from Rust), `searched` (the root
+   already holds the filter's hits: listed flat, unfiltered), `emptyText`
+   (the message for an empty list) and `onFileContext` (node, event: a
+   file or folder row's right click; the git browser passes its own
+   `allFiles`). */
 
 const { Icon: _GT_Icon } = window;
 const { flatten: _GT_flatten, filterFiles: _GT_filterFiles } = window.OMP_GIT_BROWSER;
 
 const GIT_STATUS_META = {
   Modified:  { label: "M", color: "var(--amber)",  title: "modified" },
-  Added:     { label: "A", color: "var(--accent)", title: "added" },
+  Added:     { label: "+", color: "var(--accent)", title: "added" },
   Deleted:   { label: "D", color: "var(--rose)",   title: "deleted" },
   Renamed:   { label: "R", color: "var(--cyan)",   title: "renamed" },
-  Untracked: { label: "U", color: "var(--fg-3)",   title: "untracked" },
+  Untracked: { label: "+", color: "var(--fg-3)",   title: "untracked" },
+  Ignored:   { label: "×", color: "var(--fg-4)",   title: "ignored" },
 };
 
 function GitFileTree({
   root, error, expanded, onToggle, selected, onSelect, changedOnly, onChangedOnly,
-  filter, onFilter, changedCount, commit, truncated, badges, commented, searched = false, emptyText, onFileContext,
+  filter, onFilter, changedCount, commit, truncated, badges, commented, searched = false, emptyText, onFileContext, allFiles, headless = false,
 }) {
   const rows = React.useMemo(() => {
     if (searched) return (root?.children ?? []).map(node => ({ node, depth: 0, flat: true }));
@@ -46,6 +49,7 @@ function GitFileTree({
 
   return (
     <div className="gitb-pane gitb-files">
+      {!headless && (
       <div className="gitb-pane-head">
         <span className="gitb-pane-title">{OMP_TR("files")}</span>
         {commit && (
@@ -67,7 +71,16 @@ function GitFileTree({
             <span>{changedCount} {OMP_TR("changed")}</span>
           </button>
         )}
+        {allFiles && (
+          <button type="button" className={`btn ghost gitb-toggle ${allFiles.on ? "on" : ""}`}
+            onClick={() => allFiles.onToggle(!allFiles.on)}
+            title={allFiles.on ? OMP_TR("hide ignored files") : OMP_TR("show ignored files too")}
+            aria-pressed={allFiles.on}>
+            <span>{OMP_TR("all files")}</span>
+          </button>
+        )}
       </div>
+      )}
       <div className="gitb-filter">
         <_GT_Icon name="search" size={11} color="var(--fg-4)" />
         <input className="gitb-filter-input mono" value={filter} onChange={e => onFilter(e.target.value)}
@@ -79,24 +92,27 @@ function GitFileTree({
         {!error && rows.map(({ node, depth, flat }) => {
           const meta = node.status ? GIT_STATUS_META[node.status] : null;
           const active = !node.dir && node.path === selected;
+          // An ignored directory is collapsed by Rust (its content is all
+          // ignored): rendered like a file, no expansion.
+          const leaf = !node.dir || node.status === "Ignored";
           // A file and a dir can share a path ("x" deleted, "x/a" added).
           return (
             <div key={`${node.dir ? "d" : "f"}:${node.path}`} role="treeitem" aria-selected={active}
-              aria-expanded={node.dir ? changedOnly || expanded.has(node.path) : undefined}
-              className={`gitb-row ${node.dir ? "dir" : "file"} ${node.dir && changedOnly ? "inert" : ""} ${active ? "active" : ""} ${node.status === "Deleted" ? "deleted" : ""}`}
+              aria-expanded={node.dir && !leaf ? changedOnly || expanded.has(node.path) : undefined}
+              className={`gitb-row ${node.dir ? "dir" : "file"} ${node.dir && (changedOnly || leaf) ? "inert" : ""} ${active ? "active" : ""} ${node.status === "Deleted" ? "deleted" : ""}`}
               style={{ paddingLeft: 8 + depth * 14 }}
               onClick={() => {
-                if (!node.dir) onSelect(node.path);
+                if (leaf) { if (!node.dir) onSelect(node.path); }
                 else if (!changedOnly) onToggle(node.path);
               }}
               onContextMenu={(e) => {
-                if (node.dir || !onFileContext) return;
+                if (!onFileContext) return;
                 e.preventDefault();
                 onFileContext(node, e);
               }}>
-              {node.dir
-                ? <_GT_Icon name={changedOnly || expanded.has(node.path) ? "chev" : "chevR"} size={11} color="var(--fg-4)" />
-                : <span className="gitb-row-pad" />}
+              {leaf
+                ? <span className="gitb-row-pad" />
+                : <_GT_Icon name={changedOnly || expanded.has(node.path) ? "chev" : "chevR"} size={11} color="var(--fg-4)" />}
               <span className="gitb-row-name" style={meta ? { color: meta.color } : undefined}>
                 {flat ? node.path : node.name}
               </span>

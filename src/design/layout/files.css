@@ -5,10 +5,6 @@
 /* ── Stage: the panel takes the side column ─────────────────────────── */
 .stage.with-files { grid-template-columns: minmax(0, 1fr) var(--w-files, 760px); }
 .window.is-split .stage.with-files { grid-template-columns: minmax(0, 1fr) var(--w-split, 320px) var(--w-files, 760px); }
-/* Full view: the panel is the only column. */
-.stage.with-files.files-full,
-.window.is-split .stage.with-files.files-full { grid-template-columns: minmax(0, 1fr); }
-.stage.files-full > :not(.fc-panel):not(.st-host) { display: none; }
 
 .fc-panel {
   position: relative; min-width: 0; min-height: 0;
@@ -16,16 +12,11 @@
   background: var(--bg-window);
   border-left: 1px solid var(--line);
 }
-.fc-split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(180px, 32%) minmax(0, 1fr); }
-.fc-split.no-tree { grid-template-columns: minmax(0, 1fr); }
-.fc-split > .gitb-files { border-right: 1px solid var(--line); }
 .fc-view { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .fc-spacer { flex: 1; }
 
 /* ── Tree additions (git/file-tree.jsx's optional props) ────────────── */
 .gitb-commented + .gitb-toggle { margin-left: 0; }
-.fc-split .gitb-pane-head { overflow: hidden; }
-.fc-split .gitb-toggle { white-space: nowrap; flex: none; }
 .gitb-toggle.gitb-commented { color: var(--lilac); }
 .gitb-toggle.gitb-commented.on { background: color-mix(in oklab, var(--lilac) 14%, transparent); }
 .gitb-badge {
@@ -34,22 +25,31 @@
   color: var(--lilac); background: color-mix(in oklab, var(--lilac) 20%, transparent);
 }
 
-/* ── File bar ───────────────────────────────────────────────────────── */
+/* ── Code: the preview's rows plus a marker column ──────────────────── */
+/* The panel insets its bar and code area, so the scrollbars (horizontal
+   included) always sit inside with a margin instead of on the edge. */
+.fc-panel { gap: 8px; padding: 10px; }
 .fc-bar {
   flex: none; display: flex; align-items: center; gap: 4px;
-  height: 36px; padding: 0 6px;
-  border-bottom: 1px solid var(--line);
+  height: 36px; padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   font-size: var(--d-text-xs);
 }
 .fc-bar .chip { white-space: nowrap; }
-.fc-tree-btn.on { color: var(--accent); }
 .fc-crumb { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-3); padding: 0 4px; }
 .fc-crumb b { color: var(--fg); font-weight: 500; }
 
-/* ── Code: the preview's rows plus a marker column ──────────────────── */
-.fc-body { flex: 1; min-height: 0; overflow: auto; background: var(--bg-input); }
+/* Window-coloured chrome around the dark code block, so it does not run
+   into the panel's edges. */
+.fc-body { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px; background: var(--bg-window); border: 1px solid var(--line); border-radius: 8px; }
 .fc-lines { position: relative; }
-.fc-lines .fp-line { grid-template-columns: 22px 48px 1fr; }
+.fc-lines .fp-line { grid-template-columns: 22px 36px 1fr; }
+/* A file without marks hides the marker cell as well as its column: the
+   gutter hugs the edge. (The cell still renders — hiding only the column
+   would push the line number into `1fr`.) */
+.fc-lines.no-marks .fp-line { grid-template-columns: 36px 1fr; }
+.fc-lines.no-marks .fc-mark { display: none; }
 .fc-lines .fp-ln { cursor: pointer; }
 .fc-mark { display: flex; align-items: center; justify-content: center; user-select: none; cursor: pointer; }
 .fc-num {

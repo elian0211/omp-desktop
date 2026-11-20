@@ -29,9 +29,10 @@ function check(label, fn) {
 
 // A TreeNode as git_browser_status returns it: dirs first, then files.
 const file = (path, status = null) => ({ name: path.split("/").pop(), path, dir: false, status, changed: 0, children: [] });
-const dir = (path, children) => ({
-  name: path.split("/").pop(), path, dir: true, status: null,
-  changed: children.reduce((n, c) => n + (c.dir ? c.changed : c.status ? 1 : 0), 0),
+const dir = (path, children, status = null) => ({
+  name: path.split("/").pop(), path, dir: true, status,
+  // Rust's rule: only real changes count (`StatusKind::is_change`).
+  changed: children.reduce((n, c) => n + (c.dir ? c.changed : c.status && c.status !== "Ignored" ? 1 : 0), 0),
   children,
 });
 const tree = dir("", [
@@ -71,6 +72,22 @@ check("flatten: changedOnly opens every dir and keeps changed files and their di
 
 check("flatten: a null root has no rows", () =>
   assert.deepEqual(G.flatten(null, new Set(), false), []));
+
+// Ignored paths (the "all files" toggle): in the full tree, never changed.
+const allFilesTree = dir("", [
+  dir("deps", [], "Ignored"),
+  file("debug.log", "Ignored"),
+  file("main.js", "Modified"),
+]);
+
+check("flatten: ignored files and collapsed ignored dirs show in the full tree", () =>
+  assert.deepEqual(paths(G.flatten(allFilesTree, new Set(), false)),
+    ["0:deps", "0:debug.log", "0:main.js"]));
+
+check("flatten: changedOnly hides ignored paths and they count no changes", () => {
+  assert.deepEqual(paths(G.flatten(allFilesTree, new Set(), true)), ["0:main.js"]);
+  assert.equal(allFilesTree.changed, 1);
+});
 
 // ── changedDirs / ancestorDirs ───────────────────────────────────────────────
 

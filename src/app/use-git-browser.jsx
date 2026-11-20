@@ -33,17 +33,19 @@ function _ugbResult(res) {
  *  `finishedEdits`); a rise means a file on disk changed. */
 function useGitBrowser({ bridge, initialPath, branch, edits }) {
   const [nonce, setNonce] = React.useState(0);
-  // A change refetches the log; with `edits`, the working tree too.
-  const logTick = `${branch ?? ""}\0${nonce}`;
-  const tick = `${logTick}\0${edits}`;
-  const refresh = React.useCallback(() => setNonce(n => n + 1), []);
-
   // The browsed commit; null = the working tree.
   const [commitSha, setCommitSha] = React.useState(null);
   const [selected, setSelected] = React.useState(initialPath || null);
   const [expanded, setExpanded] = React.useState(() => new Set());
   const [changedOnly, setChangedOnly] = React.useState(false);
+  const [allFiles, setAllFiles] = React.useState(false);
   const [filter, setFilter] = React.useState("");
+  // A change refetches the log; with `edits`, the working tree too; with
+  // `allFiles`, the tree (ignored paths in or out). Declared after the
+  // state it reads — a TDZ throw would blank the overlay on open.
+  const logTick = `${branch ?? ""}\0${nonce}`;
+  const tick = `${logTick}\0${edits}\0${allFiles}`;
+  const refresh = React.useCallback(() => setNonce(n => n + 1), []);
 
   const [status, setStatus] = React.useState({ value: null, error: null });
   const [log, setLog] = React.useState({ value: null, error: null });
@@ -66,7 +68,7 @@ function useGitBrowser({ bridge, initialPath, branch, edits }) {
 
   React.useEffect(() => {
     let current = true;
-    bridge.gitBrowserStatus().then(res => {
+    bridge.gitBrowserStatus(allFiles).then(res => {
       if (!current) return;
       const r = _ugbResult(res);
       setStatus(r);
@@ -198,8 +200,8 @@ function useGitBrowser({ bridge, initialPath, branch, edits }) {
     commitError: browsing?.error ?? null,
     file: shownFile?.value ?? null,
     fileError: shownFile?.error ?? null,
-    selected, expanded, changedOnly, filter,
-    select: setSelected, toggleDir, setChangedOnly, setFilter, browse, refresh, stage, discard,
+    selected, expanded, changedOnly, allFiles, filter,
+    select: setSelected, toggleDir, setChangedOnly, setAllFiles, setFilter, browse, refresh, stage, discard,
   };
 }
 
