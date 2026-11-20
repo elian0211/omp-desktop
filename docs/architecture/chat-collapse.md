@@ -2,6 +2,10 @@
 
 Code: `src/app/chat-collapse.js` (rules, `window.OMP_COLLAPSE`), `src/design/ui/collapse-toggle.jsx` (control), `chat/tool-card.jsx` / `chat/assistant-bubble.jsx` (rendering), `chat/chat-view.jsx` (wiring), `app-live.jsx` (per-tab toggles, Collapse all / Expand all), Settings → Chat (`app/settings-schema.js`; `docs/architecture/settings.md`). Tests: `tests/test-chat-collapse.mjs`, `tests/test-tool-output.mjs` (`isError`).
 
+## Process details (turn-level fold)
+
+Separate from per-card collapse: `src/app/process-details.js` (`window.OMP_PROCESS_DETAILS`, port of ompweb's `chat-transcript-plan`) groups a turn's tool cards / thought-only assistants / jobs into one collapsed **Process details** row (`design/chat/process-details.jsx`). Agent reply text stays visible; ask/approval/retry never fold. Tweaks: `hideToolActivity` (default on — fold the live turn too), `showToolCallsUnfolded`, `neverFoldActivity`. Tests: `tests/test-process-details.mjs`.
+
 ## Blocks
 
 A *block* is a tool card's body or an assistant reply's thinking. `bodyLines(msg)` estimates its rendered lines from the data (bash and eval lines wrapped at 100 chars as `pre-wrap` does, diff lines + header/track, search hits, subagent rows, thinking as prose wrapped at 100 chars), so the decision is known before layout.

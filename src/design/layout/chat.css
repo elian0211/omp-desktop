@@ -234,6 +234,9 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .tool-card-spacer { flex: 1; }
+/* Chips keep their intrinsic width: the title ellipsizes instead, and a
+   long "4548毫秒" never folds mid-word. */
+.tool-card-head .chip { white-space: nowrap; flex: none; }
 /* job row (chat-view.jsx `JobRow`): the command after the job id */
 .job-label { color: var(--fg-3); }
 /* retry row (chat/retry-row.jsx): omp retrying a failed request */
@@ -530,6 +533,38 @@
   font-family: var(--font-mono); font-size: 11px; line-height: 1.55;
   color: var(--fg-3); white-space: pre-wrap; word-break: break-all;
 }
+
+/* ── Process details (turn-level fold; ompweb process-details-toggle) ─ */
+.process-details { margin: 2px 0 6px; }
+.process-details-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 22px;
+  padding: 2px 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--fg-4);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: left;
+}
+.process-details-toggle:hover { color: var(--fg); }
+.process-details-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+.process-details-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.process-details-body { margin-top: 3px; }
 
 /* ── Compact card body (expandable summary) ──────────────────────── */
 .compact-body {
