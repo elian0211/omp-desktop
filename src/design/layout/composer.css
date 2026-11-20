@@ -129,6 +129,8 @@
   transition: border-color 160ms;
 }
 .composer-row:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+/* The foot's right-hand action group: attach, voice, bridge, send/abort. */
+.composer-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .composer-input { flex: 1; padding: 4px 4px 4px 4px; }
 .composer-input textarea {
   width: 100%;
@@ -264,3 +266,35 @@
 .mention-row.active { background: var(--bg-hover); }
 .mention-row:last-child { border-bottom: 0; }
 
+
+/* Live todo plan as one capsule above the composer (chat/plan-pill.jsx).
+   Max-width keeps it a pill even in full-width stages; centred like the
+   composer itself. */
+.plan-pill-row { display: flex; justify-content: center; padding: 0 2px 6px; }
+.plan-pill {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; max-width: 860px;
+  padding: 5px 12px;
+  background: color-mix(in oklab, var(--bg-1) 82%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: var(--d-text-sm);
+  color: var(--fg-2);
+  text-align: left;
+  transition: border-color 140ms var(--ease-out), background 140ms var(--ease-out);
+}
+.plan-pill:hover { border-color: var(--line-bright); background: var(--bg-hover); }
+.plan-pill.done { cursor: default; }
+.plan-pill-count { flex: none; color: var(--fg-3); font-size: var(--d-text-xs); }
+.plan-pill-task {
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--fg-1);
+}
+.plan-pill-bar {
+  flex: none; width: 56px; height: 3px; border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.plan-pill-bar-fill { display: block; height: 100%; border-radius: 2px; background: var(--accent); transition: width 300ms var(--ease-out); }

@@ -246,3 +246,56 @@ check("a streaming entry is left out, unless its message already ended in omp", 
   assert.equal(merged[1], ended[1]);
 });
 
+// ── restored tool cards (adaptAgentMessages × merge) ──────────────────────
+
+check("a persisted toolCall becomes a card with its toolResult folded in", () => {
+  const persisted = adapt([
+    userMsg(PROMPT, 1),
+    toolCallMsg(2),
+    { ...toolResultMsg(3), toolCallId: "toolu_2" },
+    replyMsg("started", 4),
+  ]);
+  assert.deepEqual(shape(persisted), ["user:Use the bash tool with async: true to run exactly `sleep 8 && echo finished`.", "tool", "assistant:started"]);
+  const card = persisted[1];
+  assert.equal(card._toolCallId, "toolu_2");
+  assert.equal(card.tool, "bash");
+  assert.equal(card.status, "ok");
+  assert.ok(Array.isArray(card.output) && card.output.some(l => String(l.line).includes("bg_1")));
+});
+
+check("a non-bash restored card carries the result text as its summary; errors are flagged", () => {
+  const persisted = adapt([
+    { role: "assistant", stopReason: "toolUse", timestamp: 2,
+      content: [{ type: "toolCall", id: "r1", name: "read", arguments: { path: "a.js" } }] },
+    { role: "toolResult", toolCallId: "r1", isError: true, content: [{ type: "text", text: "ENOENT: no such file" }] },
+  ]);
+  const card = persisted[0];
+  assert.equal(card.tool, "read");
+  assert.equal(card.isError, true);
+  assert.equal(card.summary, "ENOENT: no such file");
+});
+
+check("a resumed tab (no live history) shows the whole transcript with its tool calls", () => {
+  const persisted = adapt([userMsg(PROMPT, 1), toolCallMsg(2), { ...toolResultMsg(3), toolCallId: "toolu_2" }, replyMsg("started", 4)]);
+  const merged = mergeTranscript([], persisted);
+  assert.deepEqual(shape(merged), ["user:Use the bash tool with async: true to run exactly `sleep 8 && echo finished`.", "tool", "assistant:started"]);
+});
+
+check("a live tool card and its restored copy meet on the tool call id — once, and live wins", () => {
+  const live = { kind: "tool", tool: "bash", status: "ok", _toolCallId: "toolu_2", diff: [{ kind: "add", line: 1, text: "x" }] };
+  const persisted = adapt([userMsg(PROMPT, 1), toolCallMsg(2), { ...toolResultMsg(3), toolCallId: "toolu_2" }, replyMsg("started", 4)]);
+  const merged = mergeTranscript([liveUser(PROMPT, 1), live, liveBubble("started", 4)], persisted);
+  const tools = merged.filter(m => m.kind === "tool");
+  assert.equal(tools.length, 1);
+  assert.equal(tools[0], live); // frames carry the diff the replay cannot
+  assert.deepEqual(shape(merged), ["user:Use the bash tool with async: true to run exactly `sleep 8 && echo finished`.", "tool", "assistant:started"]);
+});
+
+check("a card whose omp message left the context keeps its live place", () => {
+  const live = { kind: "tool", tool: "bash", status: "ok", _toolCallId: "toolu_gone" };
+  const persisted = adapt([userMsg("go", 1), replyMsg("answer", 2)]);
+  const merged = mergeTranscript([liveUser("go", 1), live, liveBubble("answer", 2)], persisted);
+  assert.deepEqual(shape(merged), ["user:go", "tool", "assistant:answer"]);
+});
+
+console.log(`test-transcript-merge: ${passed} checks passed`);
