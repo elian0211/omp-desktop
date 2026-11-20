@@ -18,20 +18,23 @@
    ═════════════════════════════════════════════════════════════════════ */
 
 const {
-  Icon, ChatView, Composer, CommandBridge, WindowChrome, Toolbar, TabBar, SubagentPane, ProjectSidebar, EmptyWorkspace,
-  StatusBar, AmbientRail, ConversationTree, PlanKanban, HistoryModal, GitBrowser, FilePreview, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, useTweaks,
+  Icon, ChatView, PlanPill, Composer, CommandBridge, WindowChrome, Toolbar, TabBar, SubagentPane,
+  ActivityBar, SidePanel, SidePanelStub, WorkspacesView, EmptyWorkspace,
+  StatusBar, ConversationTree, HistoryModal, GitBrowser, FilePreview, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, useTweaks,
   SettingsPage, ConfirmCloseDialog,
   useWidgets, WidgetCard, WidgetErrorCard, WidgetApprovalCard, WidgetBoundary,
   TWEAK_DEFAULTS, NULL_MODEL, EMPTY_PROJECT, DEFAULT_PROFILE_ID,
   INTENT_FRAMING, APPROVAL_PROMPT,
   useBridgeSnapshot, useThemeEffect, useSubagentManager, useUpdater, useConversationTree, useGoalMode, useTerminal, TerminalPanels, timeNow,
-  useKeymap, useKeymapDispatch, useBrowser, BrowserDock, FilesPanel, useFileComments, MarkdownLinkContext: _AL_MdLinkCtx,
-  usePaneWidths, ResizeHandle, useRemote, usePrAutomation, PrAutomationCard,
+  useKeymap, useKeymapDispatch, useBrowser, BrowserDock, FilesPanel, FilesView, useFileComments, MarkdownLinkContext: _AL_MdLinkCtx,
+  usePaneWidths, ResizeHandle, useRemote, usePrAutomation, SessionView,
 } = window;
 const { routeSubmit: _routeSubmit } = window.OMP_SLASH;
 const { mergeIntoMessage: _mergeBrowserChips, browserCommand: _browserCommand, MIN_WIDTH: _AL_BROWSER_MIN } = window.OMP_BROWSER;
 const { mergeIntoMessage: _mergeFileMarks } = window.OMP_FILE_COMMENTS;
 const { recentRows, groupKey, moveGroup, moveMember, shiftGroup } = window.OMP_PROJECT_NAV;
+const { DEFAULT: _ACT_DEFAULT, openView: _actOpen } = window.OMP_ACTIVITY;
+const { toggle: _svToggle } = window.OMP_SESSION_VIEW;
 const {
   entryOf, updateEntry, pruneEntries, seedEntries,
   PLAN_IDLE, togglePlan, enterPlan, approvePlan, annotatePlan, markPlanSent,
@@ -77,11 +80,14 @@ function App() {
   const [stab, setStab] = React.useState(window.OMP_SETTINGS_TAB.initial);
   // live.js's pending "close a working tab / quit?" question, or null.
   const [closeConfirm, setCloseConfirm] = React.useState(null);
+  // Composer plan pill expanded upward (ompweb TodoList), not the kanban modal.
   const [planOpen,    setPlanOpen]    = React.useState(false);
   // The column beside the chat, per tab (`side` below): the ambient rail,
   // the conversation tree (prompt-cache navigator; design/conversation-tree.jsx,
   // app/use-conversation-tree.jsx) or the browser panel — one at a time.
   const [sides, setSides] = React.useState({});
+  // The Session activity view's accordion, per tab (app/session-view.js).
+  const [svFolds, setSvFolds] = React.useState({});
   // Plan mode is per tab (issue #28; app/session-ui.js): one entry per
   // session id, read through `plan` and written through `updatePlan` below.
   const [plans, setPlans] = React.useState({});
@@ -105,6 +111,7 @@ function App() {
   const [thinkingLevel, setThinkingLevel] = React.useState(null);
   const [ctx,           setCtx]           = React.useState(data.ctx);
   const [kanban,        setKanban]        = React.useState([]);
+  const [todoPhases,    setTodoPhases]    = React.useState([]);
   const [planMeta,      setPlanMeta]      = React.useState(data.planMeta);
   const [models,        setModels]        = React.useState([]);
   const [activity,      setActivity]      = React.useState([]);
@@ -154,8 +161,22 @@ function App() {
   // Which profile is ticked as the default for new tabs / the next launch.
   // App-wide and persisted, unlike a tab's own profile.
   const [startupProfileId, setStartupProfileId] = React.useState(DEFAULT_PROFILE_ID);
-  // Recently opened folders of the active tab's profile (project sidebar).
+  // Recently opened folders of the active tab's profile (Workspaces view).
   const [recentProjects, setRecentProjects] = React.useState([]);
+  // Activity bar + side panel (window-global view; re-click collapses).
+  // `open` stays in sync with the Layout → Side panel tweak (`sidebar`).
+  const [sideActivity, setSideActivity] = React.useState(() => ({
+    view: _ACT_DEFAULT.view,
+    open: t.sidebar ?? true,
+  }));
+  const applySideActivity = React.useCallback(next => {
+    setSideActivity(next);
+    setTweak("sidebar", next.open);
+  }, [setTweak]);
+  React.useEffect(() => {
+    const open = t.sidebar ?? true;
+    setSideActivity(a => (a.open === open ? a : { ...a, open }));
+  }, [t.sidebar]);
   // With no tab open: the profile the next tab opens under (the menu's pick,
   // else the startup default — resolved by the bridge), and notes filed
   // while there was no transcript to hold them.
@@ -170,7 +191,7 @@ function App() {
   // effect needs its folder; the rest of the component reads it here too.
   const activeProject = sessions.find(s => s.id === activeSessionId) ?? sessions[0] ?? EMPTY_PROJECT;
   useBridgeSnapshot(bridge, {
-    setMessages, setStreaming, setCtx, setKanban, setPlanMeta,
+    setMessages, setStreaming, setCtx, setKanban, setTodoPhases, setPlanMeta,
     setModels, setActivity, setSparkline,
     setModelState, setThinkingLevel,
     setSessions, setActiveSessionId, setProfiles, setStartupProfileId, setRecentProjects,
@@ -274,7 +295,9 @@ function App() {
   // counted only while one is open, and handed over as a number so
   // streaming frames that finish no edit leave the memoised browser alone.
   const gitEdits = React.useMemo(() => (gitOpen ? _gitFinishedEdits(messages) : 0), [gitOpen, messages]);
-  const filesEdits = React.useMemo(() => (side === "files" ? _gitFinishedEdits(messages) : 0), [side, messages]);
+  const filesEdits = React.useMemo(() =>
+    (side === "files" || (sideActivity.open && sideActivity.view === "files") ? _gitFinishedEdits(messages) : 0),
+    [side, sideActivity.open, sideActivity.view, messages]);
   // Collapse all / Expand all: one toggle per block in this tab, replacing
   // the tab's earlier ones; later blocks follow the modes again.
   const handleCollapseAll = (collapsed) => setCollapseOverrides(m => updateEntry(m, planKey, NO_COLLAPSE_OVERRIDES,
@@ -315,6 +338,7 @@ function App() {
     setPlans(m => pruneEntries(m, sessionIds));
     setCollapseOverrides(m => pruneEntries(m, sessionIds));
     setSides(m => seedEntries(pruneEntries(m, sessionIds), fresh, "rail", t.defaultSide ?? "rail"));
+    setSvFolds(m => pruneEntries(m, sessionIds));
   }, [sessionIds]);
   React.useEffect(() => {
     setLiveErrors(m => pruneEntries(m, sessionIds));
@@ -403,10 +427,11 @@ function App() {
   // expression as TabBar's own copy, which labels the tab bar).
   const profileLabel = id =>
     id === DEFAULT_PROFILE_ID ? null : (profiles.find(p => p.id === id)?.name ?? id);
-  const todoCounts    = kanban.reduce(
+  const todoCounts    = (todoPhases.length > 0 ? todoPhases : kanban).reduce(
     (acc, col) => {
-      acc.total += col.tasks.length;
-      acc.done  += col.tasks.filter(tk => tk.status === "done").length;
+      const tasks = col.tasks || [];
+      acc.total += tasks.length;
+      acc.done  += tasks.filter(tk => tk.status === "completed" || tk.status === "done").length;
       return acc;
     },
     { total: 0, done: 0 }
@@ -438,7 +463,10 @@ function App() {
   // marks on project files, sent with the next message like the browser's
   // annotation chips.
   const files = useFileComments({
-    bridge, tabId: activeProject.id, sessionIds, open: side === "files", setOpen: setFilesOpen,
+    bridge, tabId: activeProject.id, sessionIds,
+    // The Files activity view fetches too, not only the stage panel.
+    open: side === "files" || (sideActivity.open && sideActivity.view === "files"),
+    setOpen: setFilesOpen,
     project: activeProject, edits: filesEdits,
   });
   const filesOpenAt = files.openAt;
@@ -478,18 +506,16 @@ function App() {
   };
 
   // `activeProject.id`, not `activeSessionId`: the latter keeps a closed
-  // tab's id (see handleSelectProfile below). Widgets only run, and the PR
-  // card only reads with Auto-fix off, while the rail is on screen — not in
-  // focus layout, not under the tree or browser.
-  const railVisible = t.layout !== "focus" && side === "rail";
-  // The toolbar's rail button: hiding is the focus layout (which also
-  // closes a subagent split, as the layout is one setting); showing leaves
-  // focus layout and brings the rail back in place of the tree or browser.
-  const toggleRail = () => {
-    if (railVisible) return setTweak("layout", "focus");
-    if (t.layout === "focus") setTweak("layout", "rail");
-    setSide("rail");
-  };
+  // tab's id (see handleSelectProfile below). The right column shows only
+  // the widget plugin cards (workspace layout, phase 3); plugin scheduling
+  // follows the plan's chosen rule — window focus (the hook adds it) plus
+  // a tab open, and not the focus layout — independent of whether the
+  // column currently has anything to show, so interval plugins do not
+  // stall while it is hidden.
+  const railVisible = t.layout !== "focus" && !!activeProject.id;
+  // The Session activity view hosts the per-tab cards the rail used to
+  // (decisions 12): the PR hook may read while either is on screen.
+  const sessionViewShown = sideActivity.open && sideActivity.view === "session";
   const widgets = useWidgets({
     bridge, activeSessionId: activeProject.id, activeProjectPath: activeProject.path ?? null, railVisible, tweaks: t, setTweak,
   });
@@ -697,7 +723,7 @@ function App() {
     branchKey: activeProject.branch ?? null,
     conversationKey: JSON.stringify([activeProject.profile, activeProject.sessionFile ?? null]),
     featureEnabled: t.showChanges ?? true,
-    railVisible,
+    railVisible: railVisible || sessionViewShown,
     // Disconnected, stabilising or folder-less tabs are the hook's own
     // `connected`/`projectKey` gates.
     connected: !!bridge?.isConnected && !stab.active,
@@ -723,7 +749,7 @@ function App() {
     // composer, budget still to pick; Enter starts it. Blocked (plan mode,
     // a goal already open), the text still comes back.
     else if (c.name === "goal")      { goalUi.enter(); if (args) setPromptInsert({ text: args, nonce: Date.now() }); }
-    else if (c.name === "todo")      { setPlanOpen(true); }
+    else if (c.name === "todo")      { setPlanOpen(v => !v); }
     else if (c.name === "live")      { return handleLiveAction(args); }
     else if (c.name === "browser")   { handleBrowserCommand(args); }
     else if (c.name === "compact")   { bridge?.compact(); }
@@ -756,13 +782,14 @@ function App() {
   const handleApprovePlan = () => {
     updatePlan(approvePlan);
     bridge?.followUp(APPROVAL_PROMPT);
-    setPlanOpen(true);
+    setPlanOpen(true); // expand the plan pill so the new tasks are visible
   };
 
   // Tab select — switches the active session; bridge resets all per-session state
   // and re-fetches from the new session's omp → notify() pushes fresh data.
   const handleSelectTab = id => {
     setStab(window.OMP_SETTINGS_TAB.selectProject);
+    setPlanOpen(false);
     if (id === activeSessionId) return;
     bridge?.activateSession(id);
     // setActiveSessionId is driven by snap.activeSessionId from onUpdate
@@ -793,9 +820,67 @@ function App() {
   // activates a background tab first and keeps the transcript clean.
   const handleRenameTab = (id, title) => { bridge?.renameSession(id, title); };
 
-  // ── Project navigation (#27) ──────────────────────────────────────────────
-  const showSidebar   = t.sidebar ?? true;
-  const toggleSidebar = () => setTweak("sidebar", !showSidebar);
+  // ── Project navigation / activity bar ─────────────────────────────────────
+  // Side panel open/collapse (phase 1 remaps the old sidebar toggle).
+  const sidePanelOpen = sideActivity.open;
+  const toggleSidePanel = () => applySideActivity({ ...sideActivity, open: !sideActivity.open });
+  const focusWorkspaces = () => applySideActivity(_actOpen(sideActivity, "workspaces"));
+  const openWorkspaceBrowse = () => { focusWorkspaces(); handleNewProject(); };
+  // The Session view's accordion (app/session-view.js), per tab.
+  const handleToggleSvFold = React.useCallback(
+    section => setSvFolds(m => _svToggle(m, planKey, section)), [planKey]);
+
+  // Selection fence (styles.css): the browser keeps one selection per
+  // document, so a text drag is confined to the surface it started in —
+  // the files panel or the preview stays in the panel, one from the chat
+  // stays in the chat. pointerdown marks the surface (unselectable
+  // elsewhere, styles.css); because Chromium's mouseup re-extends the
+  // selection through unselectable territory, selectionchange clamps the
+  // live selection back into that surface. Shift is left alone (native
+  // extend-selection); pointerup / window blur end the fence.
+  React.useEffect(() => {
+    let root = null;
+    const apply = () => {
+      document.body.classList.remove("fence-code", "fence-chat");
+      if (!root) return;
+      document.body.classList.add(root.closest?.(".fc-panel, .fp-panel") ? "fence-code" : "fence-chat");
+    };
+    const onDown = (e) => {
+      if (e.button !== 0 || e.shiftKey) return;
+      const t = e.target;
+      root = t.closest?.(".fc-panel, .fp-panel") || t.closest?.(".session") || null;
+      apply();
+    };
+    const trim = () => {
+      if (!root) return;
+      const sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      const r = sel.getRangeAt(0);
+      if (root.contains(r.startContainer) && root.contains(r.endContainer)) return;
+      const all = document.createRange();
+      all.selectNodeContents(root);
+      const clamped = document.createRange();
+      if (r.compareBoundaryPoints(Range.START_TO_START, all) < 0) clamped.setStart(all.startContainer, all.startOffset);
+      else clamped.setStart(r.startContainer, r.startOffset);
+      if (r.compareBoundaryPoints(Range.END_TO_END, all) > 0) clamped.setEnd(all.endContainer, all.endOffset);
+      else clamped.setEnd(r.endContainer, r.endOffset);
+      sel.removeAllRanges();
+      if (!clamped.collapsed) sel.addRange(clamped);
+    };
+    const onUp = () => { root = null; apply(); };
+    document.addEventListener("pointerdown", onDown, true);
+    document.addEventListener("selectionchange", trim, true);
+    window.addEventListener("pointerup", onUp, true);
+    window.addEventListener("blur", onUp);
+    return () => {
+      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("selectionchange", trim, true);
+      window.removeEventListener("pointerup", onUp, true);
+      window.removeEventListener("blur", onUp);
+      root = null;
+      apply();
+    };
+  }, []);
 
   // A recent project: focus its open tab in the active profile, else spawn.
   const handleOpenRecent = async path => {
@@ -858,7 +943,8 @@ function App() {
     "app.interrupt":           () => {
       // Only abort when no overlay is open (overlays handle Escape themselves),
       // and never from the Settings page, which covers the chat.
-      if (stab.active || bridgeOpen || historyOpen || gitOpen || rulesOpen || statsOpen || promptHistoryOpen || planOpen || updater.open) return;
+      if (stab.active || bridgeOpen || historyOpen || gitOpen || rulesOpen || statsOpen || promptHistoryOpen || updater.open) return;
+      if (planOpen) { setPlanOpen(false); return; }
       if (streaming) handleAbort();
     },
     "app.thinking.cycle":      cycleThinking,
@@ -878,8 +964,8 @@ function App() {
     "desktop.history.open":    () => setHistoryOpen(v => !v),
     "desktop.shortcuts.open":  () => openSettings("shortcuts"),
     "desktop.settings.open":   () => openSettings(),
-    "desktop.sidebar.toggle":  toggleSidebar,
-    "desktop.tab.new":         handleNewProject,
+    "desktop.sidebar.toggle":  toggleSidePanel,
+    "desktop.tab.new":         openWorkspaceBrowse,
     // The settings tab, when it is the one shown, closes itself; it is the
     // last stop of next/prev (OMP_SETTINGS_TAB.cycle).
     "desktop.tab.close":       () => {
@@ -945,16 +1031,20 @@ function App() {
   // Resizable columns beside the chat (#41): which are shown, and their
   // widths as CSS variables on `.workspace`. Browser full view hides the
   // chat and the split pane (layout/browser.css), files full view the chat,
-  // the split pane and the column's handle (layout/files.css): only the
-  // sidebar is left.
+  // the split pane and the column's handle (layout/files.css): activity
+  // bar + optional side panel remain on the left.
   const workspaceRef = React.useRef(null);
   const browserFull = side === "browser" && browser.fullView;
-  const filesFull = side === "files" && files.fullView;
-  const splitShown = showSplit && !browserFull && !filesFull;
-  const sideRail = side === "tree" || side === "files" ? side : side !== "browser" && showRail ? "rail" : null;
+  const splitShown = showSplit && !browserFull;
+  // The right column shows only the widget plugin cards and vanishes when
+  // there is nothing to show (workspace layout, phase 3).
+  const widgetUI = !!widgets.fatal || widgets.configErrors.length > 0 ||
+    widgets.approvals.length > 0 || widgets.cards.length > 0;
+  const sideRail = side === "tree" || side === "files" ? side
+    : side !== "browser" && showRail && widgetUI ? "rail" : null;
   const panes = usePaneWidths({
     tweaks: t, setTweak, workspaceRef,
-    open: [showSidebar && "sidebar", splitShown && "split", sideRail].filter(Boolean),
+    open: [sidePanelOpen && "sidebar", splitShown && "split", sideRail].filter(Boolean),
     reserve: side === "browser" && !browserFull ? _AL_BROWSER_MIN : 0,
   });
 
@@ -1001,10 +1091,9 @@ function App() {
           <WindowChrome project={activeProject} />
           <Toolbar
             nav={{
-              sidebarOpen: showSidebar, onToggleSidebar: toggleSidebar,
-              onOpenProject: handleNewProject, onHistory: () => setHistoryOpen(true),
+              sidebarOpen: sidePanelOpen, onToggleSidebar: toggleSidePanel,
+              onOpenProject: openWorkspaceBrowse, onHistory: () => setHistoryOpen(true),
             }}
-            rail={{ open: railVisible, onToggle: toggleRail }}
             subagents={{ open: showSplit, onToggle: subagentUi.togglePane }}
             tree={{
               open: side === "tree", onToggle: () => toggleSide("tree"),
@@ -1014,10 +1103,6 @@ function App() {
               open: side === "browser", onToggle: () => toggleSide("browser"),
               annotate: browser.annotate, canAnnotate: browser.state.status === "running", onAnnotate: browser.setAnnotate,
               fullView: browser.fullView, onFullView: browser.setFullView,
-            }}
-            files={{
-              open: side === "files", onToggle: () => toggleSide("files"),
-              fullView: files.fullView, onFullView: files.setFullView,
             }}
             terminal={{ open: _TERM_entryOf(terminal.state, planKey).open, onToggle: () => terminal.toggle(planKey) }}
             onGit={() => setGitOpen({ path: null })}
@@ -1046,28 +1131,69 @@ function App() {
           />
 
           <div ref={workspaceRef} className="workspace" style={panes.style}>
-            {showSidebar && (
-              <ProjectSidebar
-                tabs={sessions}
-                activeId={stab.active ? null : activeSessionId}
-                projectAppearances={t.projectAppearance}
-                recents={recentRows(recentProjects, sessions, activeProfileId)}
-                profileLabel={profileLabel}
-                onSelectTab={handleSelectTab}
-                onCloseTab={handleCloseTab}
-                onRenameTab={handleRenameTab}
-                onNewInProject={handleNewInProject}
-                onOpenRecent={handleOpenRecent}
-                onForgetRecent={handleForgetRecent}
-                onOpenFolder={handleNewProject}
-                onReorder={handleReorder}
-              />
-            )}
-            {showSidebar && <ResizeHandle className="at-sidebar" {...panes.handle("sidebar")} />}
-            <div ref={stageRef} className={`stage ${side === "browser" ? `with-browser${browserFull ? " browser-full" : ""}` : sideRail ? `with-${sideRail}${filesFull ? " files-full" : ""}` : ""}`}>
+            <ActivityBar
+              view={sideActivity.view}
+              open={sidePanelOpen}
+              onChange={applySideActivity}
+            />
+            <SidePanel open={sidePanelOpen}>
+              {sideActivity.view === "workspaces" && (
+                <WorkspacesView
+                  tabs={sessions}
+                  activeId={stab.active ? null : activeSessionId}
+                  projectAppearances={t.projectAppearance}
+                  recents={recentRows(recentProjects, sessions, activeProfileId)}
+                  profileLabel={profileLabel}
+                  onSelectTab={handleSelectTab}
+                  onCloseTab={handleCloseTab}
+                  onRenameTab={handleRenameTab}
+                  onNewInProject={handleNewInProject}
+                  onOpenRecent={handleOpenRecent}
+                  onForgetRecent={handleForgetRecent}
+                  onOpenFolder={handleNewProject}
+                  onReorder={handleReorder}
+                />
+              )}
+              {sideActivity.view === "files" && (
+                noTab
+                  ? <SidePanelStub title={OMP_TR("Files")} hint={OMP_TR("Open a workspace to browse this tab's files.")} />
+                  : <FilesView ui={files} onOpen={path => filesOpenAt({ path })}
+                    onReference={path => setPromptInsert({ text: "@" + path, append: true, sessionId: planKey, nonce: Date.now() })}
+                    onReveal={path => bridge.revealProjectFile(path)} />
+              )}
+              {sideActivity.view === "session" && (
+                noTab
+                  ? <SidePanelStub title={OMP_TR("Session")} hint={OMP_TR("Open a workspace to see this tab's tools.")} />
+                  : <SessionView
+                  tabId={planKey}
+                  show={{ context: t.showContext ?? true, radar: t.showRadar ?? true, subagents: t.showSubagents ?? true, minimap: t.showMinimap ?? true, changes: t.showChanges ?? true }}
+                  folds={svFolds} onToggleFold={handleToggleSvFold}
+                  ctx={liveCtx} sparklineValues={sparkline} activity={activity}
+                  subagents={subagentList}
+                  subagentPaneOpen={showSplit}
+                  onOpenSubagent={subagentUi.open}
+                  onToggleSubagentPane={subagentUi.togglePane}
+                  messages={messages}
+                  hoveredMsgIdx={hoveredMsgIdx}
+                  onMinimapHover={setHoveredMsgIdx}
+                  onMinimapClick={handleMinimapClick}
+                  prAutomation={prAutomation} prAvailable={!!activeProject.path && !!bridge?.isConnected}
+                  bridge={bridge}
+                  extCards={extCards.filter(c => t[c.tweak] !== false)}
+                  onWidgetInsert={handleWidgetInsert}
+                />
+              )}
+            </SidePanel>
+            {sidePanelOpen && <ResizeHandle className="at-sidebar" {...panes.handle("sidebar")} />}
+            <div ref={stageRef} className={`stage ${side === "browser" ? `with-browser${browserFull ? " browser-full" : ""}` : sideRail ? `with-${sideRail}` : ""}`}>
               <main className="session" onFocusCapture={prAutomation.onConversationFocus}>
                 {noTab ? (
-                  <EmptyWorkspace notes={workspaceNotes} screen={t.startScreen} paused={stab.active} />
+                  <EmptyWorkspace
+                    notes={workspaceNotes}
+                    screen={t.startScreen}
+                    paused={stab.active}
+                    onOpenWorkspace={openWorkspaceBrowse}
+                  />
                 ) : (<>
                   <ChatView key={activeSessionId} messages={messages}
                     planMode={plan.mode}
@@ -1091,8 +1217,15 @@ function App() {
                     onToggleCollapse={handleToggleCollapse}
                     followOutput={t.followOutput}
                     submitKey={t.submitKey}
+                    neverFoldActivity={t.neverFoldActivity}
+                    hideToolActivity={t.hideToolActivity}
+                    showToolCallsUnfolded={t.showToolCallsUnfolded}
                   />
-                  <PlanPill kanban={kanban} onOpen={() => setPlanOpen(true)} />
+                  <PlanPill
+                    phases={todoPhases}
+                    expanded={planOpen}
+                    onToggle={() => setPlanOpen(v => !v)}
+                  />
                   <TerminalPanels sessions={sessions} activeId={planKey} terminal={terminal} />
                   <Composer
                     sessionId={planKey}
@@ -1171,6 +1304,7 @@ function App() {
                 <BrowserDock ui={browser} stageRef={stageRef} room={panes.browserRoom} />
               ) : side === "files" ? (
                 <FilesPanel key={planKey} ui={files} canSendNow={!goalUi.mode} onSendNow={() => handleSend("", [])} onOpenGit={handleOpenFile}
+                  onClose={() => setFilesOpen(false)}
                   onReference={path => setPromptInsert({ text: "@" + path, append: true, sessionId: planKey, nonce: Date.now() })}
                   onReveal={path => bridge.revealProjectFile(path)} />
               ) : side === "tree" ? (
@@ -1180,26 +1314,8 @@ function App() {
                   streaming={streaming}
                   onBranch={convTree.branch} onFork={convTree.fork} onOpenFile={convTree.openFile}
                 />
-              ) : showRail && (
-                <AmbientRail
-                  ctx={liveCtx}
-                  activity={activity}
-                  subagents={subagentList}
-                  subagentPaneOpen={showSplit}
-                  onOpenSubagent={subagentUi.open}
-                  onToggleSubagentPane={subagentUi.togglePane}
-                  messages={messages}
-                  microcopy={data.microcopy}
-                  sparklineValues={sparkline}
-                  hoveredMsgIdx={hoveredMsgIdx}
-                  onMinimapHover={setHoveredMsgIdx}
-                  onMinimapClick={handleMinimapClick}
-                  show={{ context: t.showContext ?? true, radar: t.showRadar ?? true, subagents: t.showSubagents ?? true, minimap: t.showMinimap ?? true }}
-                >
-                  {/* Hidden without the GitHub CLI; the hook keeps checking on
-                      focus, so installing gh brings it back. */}
-                  {(t.showChanges ?? true) && !prAutomation.ghMissing && <PrAutomationCard key={planKey} automation={prAutomation} bridge={bridge}
-                    available={!!activeProject.path && !!bridge?.isConnected} />}
+              ) : showRail && widgetUI && (
+                <aside className="rail" aria-label={OMP_TR("rail widgets")}>
                   {widgets.fatal && <WidgetErrorCard title="widgets.json" error={widgets.fatal} />}
                   {widgets.configErrors.map((e, i) => <WidgetErrorCard key={i} title="widgets.json" error={e} />)}
                   {widgets.approvals.map(a => (
@@ -1214,12 +1330,7 @@ function App() {
                         onRefresh={() => widgets.refresh(c.id)} onInsert={handleWidgetInsert} insertCfg={c.insert} />
                     </WidgetBoundary>
                   ))}
-                  {extCards.filter(c => t[c.tweak] !== false).map(c => (
-                    <WidgetBoundary key={c.id} title={c.title} resetKey={c.run}>
-                      <WidgetCard title={c.title} run={c.run} source="extension" onInsert={handleWidgetInsert} />
-                    </WidgetBoundary>
-                  ))}
-                </AmbientRail>
+                </aside>
               )}
               {settingsCtx && (
                 <div className="st-host" hidden={!stab.active}>
@@ -1230,7 +1341,7 @@ function App() {
           </div>
           {/* Full window width under the workspace: no side column (rail,
               tree, browser panel, subagent split) ever narrows it. */}
-          <StatusBar ctx={liveCtx} todoDone={todoCounts.done} todoTotal={todoCounts.total} onTodo={() => setPlanOpen(true)} updater={updater}
+          <StatusBar ctx={liveCtx} todoDone={todoCounts.done} todoTotal={todoCounts.total} onTodo={() => setPlanOpen(v => !v)} updater={updater}
             branch={activeProject.branch} tabId={activeProject.id} bridge={bridge}
             branchLocked={window.OMP_TURN_STATUS.busyInRepo(sessions, activeProject.repoRoot)} />
         </div>
@@ -1248,15 +1359,6 @@ function App() {
         currentModelId={model.id}
         profileId={activeProfileId}
       />
-
-      {planOpen && (
-        <PlanKanban
-          kanban={kanban}
-          planMeta={planMeta}
-          onClose={() => setPlanOpen(false)}
-          onAbort={handleAbort}
-        />
-      )}
 
       {historyOpen && (
         <HistoryModal

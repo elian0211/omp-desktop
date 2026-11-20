@@ -33,6 +33,9 @@
     projects: [],
     messages: [],
     kanban: [],
+    // Raw omp TodoPhase[] for the composer plan pill (ompweb TodoList shape).
+    // `kanban` is the design remap used by the plan kanban modal.
+    todoPhases: [],
     planMeta: { ask: "", strategy: "", touches: [], branch: "main", risks: [], estimate: { tokens: "—", cost: "—", wall: "—" } },
     commands: LOCAL_COMMANDS,
     models: [],
@@ -60,6 +63,7 @@
     thinkingLevel:  null,
     ctx:            { ...DEFAULT_DATA.ctx },
     kanban:         [],
+    todoPhases:     [],
     planMeta:       { ...DEFAULT_DATA.planMeta },
     models:         [],
     commands:       LOCAL_COMMANDS,
@@ -393,6 +397,7 @@
       thinkingLevel:   state.thinkingLevel,
       ctx:             state.ctx,
       kanban:          state.kanban,
+      todoPhases:      state.todoPhases,
       planMeta:        state.planMeta,
       models:          state.models,
       activity:        state.activity,
@@ -746,8 +751,9 @@
     window.OMP_DATA.messages  = state.messages;
     window.OMP_DATA.models    = state.models;
     window.OMP_DATA.commands  = state.commands;
-    window.OMP_DATA.kanban    = state.kanban;
-    window.OMP_DATA.planMeta  = state.planMeta;
+    window.OMP_DATA.kanban     = state.kanban;
+    window.OMP_DATA.todoPhases = state.todoPhases;
+    window.OMP_DATA.planMeta   = state.planMeta;
     window.OMP_DATA.ctx       = state.ctx;
     window.OMP_DATA.activity  = state.activity;
 
@@ -814,6 +820,7 @@
       thinkingLevel: null,
       ctx:           { ...DEFAULT_DATA.ctx },
       kanban:        [],
+      todoPhases:    [],
       planMeta:      { ...DEFAULT_DATA.planMeta },
       models:        [],
       commands:      LOCAL_COMMANDS,
@@ -867,6 +874,7 @@
       thinkingLevel: state.thinkingLevel,
       ctx:           { ...state.ctx },
       kanban:        state.kanban,
+      todoPhases:    state.todoPhases,
       planMeta:      state.planMeta,
       models:        state.models,
       commands:      state.commands,
@@ -915,6 +923,7 @@
       thinkingLevel: snap.thinkingLevel,
       ctx:           snap.ctx,
       kanban:        snap.kanban,
+      todoPhases:    snap.todoPhases ?? [],
       planMeta:      snap.planMeta,
       models:        snap.models,
       commands:      snap.commands ?? LOCAL_COMMANDS,
@@ -2746,8 +2755,9 @@
           if (ev.toolName === "todo_write") {
             const phases = ev.result?.details?.phases ?? ev.result?.phases ?? [];
             if (phases.length > 0) {
-              state.kanban   = window.buildKanban(phases);
-              state.planMeta = window.buildPlanMeta(phases, state.rpcState);
+              state.todoPhases = phases;
+              state.kanban     = window.buildKanban(phases);
+              state.planMeta   = window.buildPlanMeta(phases, state.rpcState);
               _injectInlinePlan(phases);
             }
           }
@@ -2901,8 +2911,9 @@
       state.models = state.models.map(m => ({ ...m, current: m.id === rpcState.model.id }));
     }
     if (rpcState.todoPhases?.length > 0) {
-      state.kanban   = window.buildKanban(rpcState.todoPhases);
-      state.planMeta = window.buildPlanMeta(rpcState.todoPhases, rpcState);
+      state.todoPhases = rpcState.todoPhases;
+      state.kanban     = window.buildKanban(rpcState.todoPhases);
+      state.planMeta   = window.buildPlanMeta(rpcState.todoPhases, rpcState);
     }
 
     // Only update the tab name if omp provides an explicit human-readable
@@ -3228,7 +3239,25 @@
       // never start a window drag — a mousedown there is a click or a caret
       // placement, and starting an OS window move instead swallows it.
       if (e.target.closest("button, input, textarea, .chrome-lights, .win-controls")) return;
+      // The second press of a double-click must not start a drag: the OS
+      // move would swallow it and the dblclick below never fires, so
+      // double-click-to-maximise only worked on the window edges (the
+      // DWM border). Tauri's own drag-region script does the same check.
+      if (e.detail === 2) return;
       win.startDragging().catch(() => {});
+    });
+
+    // Double-click on the chrome toggles maximize — the standard titlebar
+    // behaviour. Tauri's injected drag-region script already toggles when the
+    // click lands on the chrome div itself (`drag.js` checks
+    // `el === composedPath[0]`), so handle only child elements (title text,
+    // status area) here — handling both would toggle twice and cancel out.
+    // Same exclusion set as drag: a double-click on a button is a click.
+    document.addEventListener("dblclick", e => {
+      const chrome = e.target.closest(".chrome");
+      if (!chrome || e.target === chrome) return;
+      if (e.target.closest("button, input, textarea, .chrome-lights, .win-controls")) return;
+      win.isMaximized().then(m => m ? win.unmaximize() : win.maximize()).catch(() => {});
     });
 
     if (isWin) {
@@ -3986,6 +4015,34 @@
     setIntelligenceSettings(profile, patch) {
       return _invokeResult("intelligence_settings_set", { profile, patch });
     },
+    /** The profile's models.yml snapshot for Settings → Models
+     *  (src-tauri models_config.rs): `{ok, value}` with `{path, exists,
+     *  parseError, providers}` — `apiKey` masked, never echoed — or
+     *  `{ok: false, error}`. */
+    modelsConfig(profile) {
+      return _invokeResult("models_config_get", { profile });
+    },
+    /** Rebuilds models.yml from the editor's provider list; `apiKeys`
+     *  carries typed keys (empty string clears). Same result shape, with
+     *  the fresh snapshot. */
+    setModelsConfig(profile, providers, apiKeys) {
+      return _invokeResult("models_config_set", { profile, providers, apiKeys });
+    },
+    /** The MCP snapshot for `profile`: the user mcp.json plus `project`'s
+     *  when given (src-tauri mcp_config.rs; `env`/`headers` redacted):
+     *  `{ok, value}` or `{ok: false, error}`. */
+    mcpConfig(profile, project) {
+      return _invokeResult("mcp_config_get", { profile, project: project ?? null });
+    },
+    /** Adds or renames one server in `scope` (`user` | `project`); the
+     *  reply carries the refreshed snapshot. */
+    setMcpServer(profile, project, scope, name, server, previousName) {
+      return _invokeResult("mcp_server_set", { profile, project: project ?? null, scope, name, server, previousName });
+    },
+    /** Removes one server; same result shape. */
+    deleteMcpServer(profile, project, scope, name) {
+      return _invokeResult("mcp_server_delete", { profile, project: project ?? null, scope, name });
+    },
     /** Manual rename from the tab bar or sidebar (#32): omp's own
      *  `/rename <title>` builtin, so the name is stored as user-set and
      *  survives resume, and — exactly like a typed `/rename` — retires
@@ -4314,9 +4371,10 @@
     // resolve to `{ok: true, value}` or `{ok: false, error}` so the overlay
     // can show why (e.g. not a git repository); no project → null.
 
-    /** Tree with git status marks, repo/branch info: `StatusView`. */
-    gitBrowserStatus() {
-      return _gitBrowserInvoke("git_browser_status", {});
+    /** Tree with git status marks, repo/branch info: `StatusView`.
+     *  `allFiles` adds the ignored paths (`Ignored` marks). */
+    gitBrowserStatus(allFiles) {
+      return _gitBrowserInvoke("git_browser_status", { allFiles: allFiles || undefined });
     },
 
     /** One working-tree file with its change against HEAD inline: `FileView`.

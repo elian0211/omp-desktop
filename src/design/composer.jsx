@@ -679,18 +679,6 @@ function Composer({ sessionId, sessionIds, onSend, onPick, planMode, onTogglePla
       {voiceSpectrum && <VoiceSpectrum source={voiceSpectrum} />}
 
       <div className="composer-row">
-        <button className="btn icon ghost" title={OMP_TR("attach image")} onClick={() => fileInputRef.current?.click()}>
-          <Icon name="image" size={13} />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: "none" }}
-          onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
-        />
-        <VoiceModeButton key={sessionId} live={liveVoice} dictation={dictation} codexLogin={codexLogin} onLiveAction={onLiveAction} onDictationAction={onDictationAction} />
         <div className="composer-input">
           <textarea
             ref={taRef}
@@ -716,41 +704,6 @@ function Composer({ sessionId, sessionIds, onSend, onPick, planMode, onTogglePla
             aria-activedescendant={showMention ? `mention-row-${mentionActiveIdx}` : undefined}
           />
         </div>
-        <button className="btn outlined" title={bridgeHint ? `open command bridge (${bridgeHint})` : "open command bridge"} onClick={onOpenCmd}>
-          <Icon name="command" size={11} />
-          {bridgeKeyHint && <span className="kbd" style={{ marginLeft: 2 }}>{bridgeKeyHint}</span>}
-        </button>
-        {isStreaming ? (
-          <>
-            {steerable && (
-              <button className={`btn outlined${goalMode ? " goal-resume" : ""}`} onClick={send} disabled={pendingImages > 0}
-                style={goalMode ? undefined : { color: "var(--amber)", borderColor: "color-mix(in oklab, var(--amber) 40%, var(--line))" }}>
-                <Icon name={goalMode ? "goal" : "arrow"} size={10} color={goalMode ? "var(--lilac)" : "var(--amber)"} /> {goalMode ? OMP_TR("start goal") : OMP_TR("steer")}
-              </button>
-            )}
-            <button className="btn danger" onClick={onAbort}>
-              <Icon name="stop" size={10} /> {OMP_TR("abort")} {abortHint && <span className="kbd">{abortHint}</span>}
-            </button>
-          </>
-        ) : (
-          <>
-            {planMode && (
-              <button className="btn outlined" onClick={onApprove}
-                style={{ color: "var(--amber)", borderColor: "color-mix(in oklab, var(--amber) 40%, var(--line))" }}>
-                <Icon name="play" size={10} color="var(--amber)" /> {OMP_TR("approve")}
-              </button>
-            )}
-            <button className={`btn primary${goalMode ? " goal-start" : ""}`} onClick={send}
-              disabled={!sendable || pendingImages > 0}>
-              {goalMode
-                ? OMP_TR("start goal")
-                : planMode
-                ? `${OMP_TR("send feedback")}${annotationCount > 0 ? ` · ${window.OMP_I18N.plural(annotationCount, "{n} comment", "{n} comments", { n: annotationCount })}` : ""}`
-                : OMP_TR("send")}
-              {" "}<Icon name="arrow" size={11} />
-            </button>
-          </>
-        )}
       </div>
 
       <div className="composer-foot">
@@ -789,6 +742,55 @@ function Composer({ sessionId, sessionIds, onSend, onPick, planMode, onTogglePla
             ...(abortHint ? [`${abortHint} ${OMP_TR("abort")}`] : []),
           ].join(" · ")}
         </span>
+        <div className="composer-actions">
+          <button className="btn icon ghost" title={OMP_TR("attach image")} onClick={() => fileInputRef.current?.click()}>
+            <Icon name="image" size={13} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
+          />
+          <VoiceModeButton key={sessionId} live={liveVoice} dictation={dictation} codexLogin={codexLogin} onLiveAction={onLiveAction} onDictationAction={onDictationAction} />
+          <button className="btn outlined" title={bridgeHint ? `open command bridge (${bridgeHint})` : "open command bridge"} onClick={onOpenCmd}>
+            <Icon name="command" size={11} />
+            {bridgeKeyHint && <span className="kbd" style={{ marginLeft: 2 }}>{bridgeKeyHint}</span>}
+          </button>
+          {isStreaming ? (
+            <>
+              {steerable && (
+                <button className={`btn outlined${goalMode ? " goal-resume" : ""}`} onClick={send} disabled={pendingImages > 0}
+                  style={goalMode ? undefined : { color: "var(--amber)", borderColor: "color-mix(in oklab, var(--amber) 40%, var(--line))" }}>
+                  <Icon name={goalMode ? "goal" : "arrow"} size={10} color={goalMode ? "var(--lilac)" : "var(--amber)"} /> {goalMode ? OMP_TR("start goal") : OMP_TR("steer")}
+                </button>
+              )}
+              <button className="btn danger" onClick={onAbort}>
+                <Icon name="stop" size={10} /> {OMP_TR("abort")} {abortHint && <span className="kbd">{abortHint}</span>}
+              </button>
+            </>
+          ) : (
+            <>
+              {planMode && (
+                <button className="btn outlined" onClick={onApprove}
+                  style={{ color: "var(--amber)", borderColor: "color-mix(in oklab, var(--amber) 40%, var(--line))" }}>
+                  <Icon name="play" size={10} color="var(--amber)" /> {OMP_TR("approve")}
+                </button>
+              )}
+              <button className={`btn primary${goalMode ? " goal-start" : ""}`} onClick={send}
+                disabled={!sendable || pendingImages > 0}>
+                {goalMode
+                  ? OMP_TR("start goal")
+                  : planMode
+                  ? `${OMP_TR("send feedback")}${annotationCount > 0 ? ` · ${window.OMP_I18N.plural(annotationCount, "{n} comment", "{n} comments", { n: annotationCount })}` : ""}`
+                  : OMP_TR("send")}
+                {" "}<Icon name="arrow" size={11} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -126,6 +126,8 @@ check("the schema's Agent rows are exactly the module's rows plus profiles/goals
     compactionMid: 1, compactionContinue: 1, compactionOrder: 1, memoryBackend: 1, memoryScope: 1,
     memoryRecall: 1, memoryRetain: 1, autolearn: 1, autolearnContinue: 1, retries: 1,
     modelFallback: 1, modelRoles: 1,
+    // The slice spans the Models and MCP sections (between Agent and Session).
+    providers: 1, mcpUser: 1, mcpProject: 1,
   }).sort();
   assert.deepEqual(types, known);
 });

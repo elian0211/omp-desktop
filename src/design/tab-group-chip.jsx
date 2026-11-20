@@ -1,9 +1,10 @@
 /* ═════════════════════════════════════════════════════════════════════
-   tab-group-chip.jsx — one tab-bar chip for several tabs on one project
+   tab-group-chip.jsx — one tab-bar chip for a project's tabs
 
    Issue #27: tabs on the same folder *and* profile collapse into a single
-   chip (`omp-desktop 3 ▾`); its dropdown lists the member tabs and offers
-   "new conversation" in that project. Grouping itself is
+   chip (`omp-desktop 3 ▾`, or `omp-desktop 1 ▾` with one conversation);
+   its dropdown lists the member tabs and offers "new conversation" in
+   that project when the group has a path. Grouping itself is
    `OMP_PROJECT_NAV.groupTabs` (app/project-nav.js); this file only renders.
    ═════════════════════════════════════════════════════════════════════ */
 
@@ -23,8 +24,8 @@ function TabRunDot({ state }) {
 }
 
 /** Name of a tab shown on its own (#46): `folder · title` once the title
- *  is no longer the folder name, the folder truncating first. Shared by the
- *  tab bar and the project sidebar; `className` is the caller's name class. */
+ *  is no longer the folder name, the folder truncating first. Used by the
+ *  Workspaces view's single-tab row; `className` is the caller's name class. */
 function TabLabel({ tab, className, title }) {
   const { prefix, title: name } = tabLabel(tab);
   if (!prefix) return <span className={className} title={title}>{name}</span>;
@@ -121,19 +122,23 @@ function TabGroupChip({ group, activeId, profileLabel, onSelect, onClose, onNewI
                   <Icon name="edit" size={9} />
                 </button>
               )}
-              {/* Stays open: the rest of the group is still listed, and when
-                  fewer than two tabs remain the whole chip unmounts. */}
+              {/* Stays open: the rest of the group is still listed. */}
               <button className="tab-close" title={OMP_TR("close tab")} onClick={() => onClose?.(t.id)}>
                 <Icon name="close" size={9} />
               </button>
             </div>
           ))}
-          <div className="tab-group-sep" role="separator" />
-          <button className="tab-group-item" role="menuitem"
-            onClick={() => { onNewInProject?.(group.path, group.profile); close(); }}>
-            <span className="tab-group-dot"><Icon name="plus" size={10} /></span>
-            <span className="tab-name">{OMP_TR("new conversation")}</span>
-          </button>
+          {/* Pathless tabs never get a folder to spawn into (project-nav). */}
+          {group.path && (
+            <>
+              <div className="tab-group-sep" role="separator" />
+              <button className="tab-group-item" role="menuitem"
+                onClick={() => { onNewInProject?.(group.path, group.profile); close(); }}>
+                <span className="tab-group-dot"><Icon name="plus" size={10} /></span>
+                <span className="tab-name">{OMP_TR("new conversation")}</span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

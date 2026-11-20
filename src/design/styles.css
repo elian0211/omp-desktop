@@ -73,6 +73,10 @@
   --syntax-fn: #6EE7FF;
   --syntax-tag: #FF7AC6;
 
+  /* code surfaces (file preview / files panel) */
+  --code-bg: #1A1D23;
+  --code-gutter-bg: #161A21;
+
   --diff-add-bg: rgba(138, 240, 200, 0.10);
   --diff-add-fg: #8AF0C8;
   --diff-rm-bg: rgba(255, 136, 150, 0.08);
@@ -169,6 +173,10 @@
   --syntax-fn: #1F7A8C;
   --syntax-tag: #C2438C;
 
+  /* code surfaces (file preview / files panel) */
+  --code-bg: #FBF9F2;
+  --code-gutter-bg: #EFECE1;
+
   --diff-add-bg: rgba(31, 138, 91, 0.10);
   --diff-add-fg: #145C3D;
   --diff-rm-bg: rgba(192, 74, 86, 0.08);
@@ -176,6 +184,212 @@
 
   --grain-opacity: 0;
   color-scheme: light;
+}
+
+/* ── Visual Studio (VS 2022 light) ────────────────────────────────────── */
+.theme-visualstudio {
+  --bg-app: #E9E9E9;
+  --bg-window: #FAFAFA;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F8F8F8;
+  --bg-input: #FFFFFF;
+  --bg-hover: #E8E8E8;
+  --bg-active: #D8D8D8;
+
+  --line: #D0D0D0;
+  --line-soft: #E0E0E0;
+  --line-bright: #B7B7B7;
+
+  --fg: #1E1E1E;
+  --fg-2: #333337;
+  --fg-3: #616161;
+  --fg-4: #8E8E8E;
+  --fg-5: #B0B0B0;
+
+  --accent: #007ACC;
+  --accent-deep: #005A9E;
+  --accent-soft: rgba(0, 122, 204, 0.10);
+  --accent-glow: rgba(0, 122, 204, 0.35);
+
+  --magenta: #B750D6;
+  --cyan: #2B91AF;
+  --amber: #B7770A;
+  --lilac: #874DAC;
+  --rose: #CA5100;
+  --lime: #5C8A1F;
+
+  --syntax-comment: #008000;
+  --syntax-key: #0000FF;
+  --syntax-str: #A31515;
+  --syntax-num: #B7770A;
+  --syntax-fn: #2B91AF;
+  --syntax-tag: #A31515;
+
+  /* code surfaces (file preview / files panel) */
+  --code-bg: #FFFFFF;
+  --code-gutter-bg: #F0F0F0;
+
+  --diff-add-bg: rgba(0, 122, 60, 0.10);
+  --diff-add-fg: #0E7040;
+  --diff-rm-bg: rgba(196, 49, 57, 0.08);
+  --diff-rm-fg: #A1260D;
+
+  --grain-opacity: 0;
+  color-scheme: light;
+}
+
+/* VS-flavoured chrome, colours as given: blue title bar and activity bar,
+   periwinkle tab strip, toolbar fading across the two blues, dark-slate
+   status bar with light text. */
+.theme-visualstudio .chrome {
+  background: #A7C6DB;
+  border-bottom-color: #8FB2C9;
+}
+.theme-visualstudio .toolbar {
+  background: linear-gradient(90deg, #C8DBE9, #A7C6DB);
+  border-bottom-color: #9FB8CC;
+}
+.theme-visualstudio .tabs {
+  background: #C8DBE9;
+  border-bottom-color: #AEB2D1;
+}
+.theme-visualstudio .activity-bar {
+  background: #A7C6DB;
+  border-right-color: #8FB2C9;
+}
+.theme-visualstudio .status {
+  background: #4C5A64;
+  border-top-color: #3D4851;
+  color: #D6DEE4;
+}
+/* The dark slate needs light text everywhere inside: cells, separators,
+   cost/branch labels (some carry inline `var(--fg-3)` styles). */
+.theme-visualstudio .status * {
+  color: #D6DEE4 !important;
+}
+.theme-visualstudio .chrome .win-ctrl:hover { background: rgba(255, 255, 255, 0.4); }
+/* Status bar interactions on the dark slate: a hover turns the pill light
+   with dark text (the blanket light-text rule above must not win), and the
+   status dot reads in the same light tone as the text. */
+.theme-visualstudio .status .btn:hover,
+.theme-visualstudio .status .btn:hover * {
+  background: #E8E8E8;
+  color: #1E1E1E !important;
+}
+.theme-visualstudio .status .dot.live {
+  background: #D6DEE4 !important;
+}
+/* Icons draw with SVG stroke/fill attributes, not CSS colour. */
+.theme-visualstudio .status svg { stroke: #D6DEE4 !important; }
+.theme-visualstudio .status svg [stroke="none"] { fill: #D6DEE4 !important; }
+/* The send button takes the title-bar blue instead of the accent. */
+.theme-visualstudio .composer .btn.primary {
+  background: #A7C6DB;
+  border-color: #A7C6DB;
+  color: #1E1E1E;
+}
+.theme-visualstudio .composer .btn.primary:hover {
+  background: #9BBAD1;
+  border-color: #9BBAD1;
+}
+
+/* ── Eye care (豆沙绿: the VS light skin with the blues turned green) ── */
+.theme-eyecare {
+  --bg-app: #E3EDE3;
+  --bg-window: #F4F8F3;
+  --bg-surface: #FAFCF9;
+  --bg-elevated: #F3F8F2;
+  --bg-input: #FCFEFB;
+  --bg-hover: #E9F1E8;
+  --bg-active: #DAE7D8;
+
+  --line: #D6E1D4;
+  --line-soft: #E4EDE2;
+  --line-bright: #C0D0BD;
+
+  --fg: #1E1E1E;
+  --fg-2: #33402F;
+  --fg-3: #66735F;
+  --fg-4: #8A9685;
+  --fg-5: #B0BAAE;
+
+  --accent: #3D9463;
+  --accent-deep: #2A7A4E;
+  --accent-soft: rgba(61, 148, 99, 0.10);
+  --accent-glow: rgba(61, 148, 99, 0.30);
+
+  --magenta: #B750D6;
+  --cyan: #2B91AF;
+  --amber: #B7770A;
+  --lilac: #6A4FE0;
+  --rose: #CA5100;
+  --lime: #5C8A1F;
+
+  --syntax-comment: #7A9A72;
+  --syntax-key: #874DAC;
+  --syntax-str: #A31515;
+  --syntax-num: #B7770A;
+  --syntax-fn: #2B91AF;
+  --syntax-tag: #A31515;
+
+  /* code surfaces (file preview / files panel) */
+  --code-bg: #F6FAF5;
+  --code-gutter-bg: #EBF2EA;
+
+  --diff-add-bg: rgba(61, 148, 99, 0.10);
+  --diff-add-fg: #2A7A4E;
+  --diff-rm-bg: rgba(196, 49, 57, 0.08);
+  --diff-rm-fg: #A1260D;
+
+  --grain-opacity: 0;
+  color-scheme: light;
+}
+
+/* The eye-care chrome: the VS overrides with the blues turned pale green. */
+.theme-eyecare .chrome {
+  background: #C2D8C6;
+  border-bottom-color: #A6BFA9;
+}
+.theme-eyecare .toolbar {
+  background: linear-gradient(90deg, #DCEBE0, #C2D8C6);
+  border-bottom-color: #AEC9B1;
+}
+.theme-eyecare .tabs {
+  background: #DCEBE0;
+  border-bottom-color: #B4C4B6;
+}
+.theme-eyecare .activity-bar {
+  width: 40px;
+  background: #C2D8C6;
+  border-right-color: #A6BFA9;
+}
+.theme-eyecare .status {
+  background: #5A7263;
+  border-top-color: #4A5F52;
+  color: #DDE8DF;
+}
+.theme-eyecare .status * {
+  color: #DDE8DF !important;
+}
+.theme-eyecare .status .dot.live {
+  background: #DDE8DF !important;
+}
+.theme-eyecare .status svg { stroke: #DDE8DF !important; }
+.theme-eyecare .status svg [stroke="none"] { fill: #DDE8DF !important; }
+.theme-eyecare .status .btn:hover,
+.theme-eyecare .status .btn:hover * {
+  background: #E9F1E8;
+  color: #243026 !important;
+}
+.theme-eyecare .chrome .win-ctrl:hover { background: rgba(255, 255, 255, 0.4); }
+.theme-eyecare .composer .btn.primary {
+  background: #C2D8C6;
+  border-color: #C2D8C6;
+  color: #243026;
+}
+.theme-eyecare .composer .btn.primary:hover {
+  background: #B2CCB7;
+  border-color: #B2CCB7;
 }
 
 /* ── Density ──────────────────────────────────────────────────────────── */
@@ -270,6 +484,22 @@ input, textarea { font: inherit; color: inherit; background: transparent; border
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--line-bright); border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* ── Selection fence ──────────────────────────────────────────────────── */
+/* The browser keeps one selection per document. While a text drag is under
+   way (app-live's mousedown capture marks the body), the surfaces the drag
+   did not start in are temporarily unselectable, so the selection stays in
+   the file panel or the chat it began in. */
+body.fence-code .app,
+body.fence-chat .fc-panel,
+body.fence-chat .fp-panel {
+  -webkit-user-select: none; user-select: none;
+}
+body.fence-code .fc-panel,
+body.fence-code .fp-panel {
+  -webkit-user-select: text; user-select: text;
+}
 
 /* ── Common motion utilities ──────────────────────────────────────────── */
 /* The endless decorative loops (shimmer, pulseDot, drift; tab-run-pulse in

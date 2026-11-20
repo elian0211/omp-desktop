@@ -16,6 +16,7 @@ function useBridgeSnapshot(bridge, setters) {
       setters.setStreaming(snap.isStreaming);
       setters.setCtx(snap.ctx);
       setters.setKanban(snap.kanban);
+      setters.setTodoPhases(snap.todoPhases ?? []);
       setters.setPlanMeta(snap.planMeta);
       setters.setModels(snap.models);
       setters.setActivity(snap.activity);

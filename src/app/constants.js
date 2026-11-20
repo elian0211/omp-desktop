@@ -11,6 +11,8 @@
 
 (function () {
   // `foldThinking` / `foldTools`: null until picked (OMP_COLLAPSE.foldModes).
+  // `hideToolActivity` / `showToolCallsUnfolded` / `neverFoldActivity`:
+  // turn-level Process details fold (OMP_PROCESS_DETAILS; Settings → Chat).
   // `browserWidth`: px of the browser panel, 0 = half the stage (OMP_BROWSER.clampWidth).
   // `sidebarWidth` / `splitWidth` / `railWidth` / `treeWidth` / `filesWidth`: px of those
   // columns, 0 = the default (OMP_LAYOUT_WIDTHS.fit).
@@ -47,6 +49,9 @@
     "foldThinking": null,
     "foldTools": null,
     "collapseAfter": 5,
+    "hideToolActivity": true,
+    "showToolCallsUnfolded": false,
+    "neverFoldActivity": false,
     "followOutput": true,
     "updateCheck": true,
     "skippedUpdate": null,

@@ -101,6 +101,11 @@
        must load before them. -->
   <script src="app/chat-collapse.js"></script>
 
+  <!-- Turn-level "Process details" fold (ompweb chat-transcript-plan).
+       Dependency-free IIFE; design/chat/chat-view.jsx destructures
+       window.OMP_PROCESS_DETAILS at top level. -->
+  <script src="app/process-details.js"></script>
+
   <!-- Prompt history (issue #16): pure list/navigation helpers, in-memory
        only. Dependency-free IIFE; composer.jsx references window.
        OMP_PROMPT_HISTORY, and live.js reads it at its own top-level IIFE
@@ -129,14 +134,18 @@
   <!-- Project navigation (issue #27): pure tab grouping/lookup helpers, plus
        the history panel's per-project filter chips (#35). Dependency-free
        IIFE; design/chrome.jsx, design/tab-group-chip.jsx,
-       design/project-sidebar.jsx and design/history-modal.jsx destructure
+       design/workspaces-view.jsx and design/history-modal.jsx destructure
        window.OMP_PROJECT_NAV at top level and live.js calls it, so it must
        load before all of them. -->
   <script src="app/project-nav.js"></script>
 
+  <!-- Activity bar view ids / select-collapse (workspaces layout plan).
+       design/activity-bar.jsx and app-live.jsx read window.OMP_ACTIVITY. -->
+  <script src="app/activity.js"></script>
+
   <!-- Per-project appearance: theme/accent overrides keyed by project folder.
        Depends on project-nav's normPath; app/use-bridge-snapshot.jsx,
-       design/project-sidebar.jsx and design/settings/rows-appearance.jsx
+       design/workspaces-view.jsx and design/settings/rows-appearance.jsx
        read it late-bound, so it must load before live.js and the settings
        page. -->
   <script src="app/project-appearance.js"></script>
@@ -174,6 +183,10 @@
        app/use-goal-mode.jsx and app-live.jsx destructure
        window.OMP_SESSION_UI at top level, so it must load before them. -->
   <script src="app/session-ui.js"></script>
+  <!-- The Session activity view's per-tab accordion state: depends on
+       OMP_SESSION_UI's map helpers; app-live.jsx reads window.OMP_SESSION_VIEW
+       at top level, so it loads right after session-ui.js. -->
+  <script src="app/session-view.js"></script>
   <!-- Live voice RPC state reducer, read by live.js at startup. -->
   <script src="app/live-voice.js"></script>
   <!-- Quoted chat/voice history for each native live connection. -->
@@ -235,6 +248,12 @@
        and defaults. Dependency-free IIFE; app/use-intelligence.jsx and
        design/settings/rows-intelligence.jsx destructure/look it up. -->
   <script src="app/intelligence.js"></script>
+  <!-- Settings → Models: pure draft/validate/save-payload helpers over the
+       models.yml snapshot. Dependency-free IIFE; rows-models.jsx reads it. -->
+  <script src="app/models.js"></script>
+  <!-- Settings → MCP: pure validation/type helpers over the mcp.json
+       snapshot. Dependency-free IIFE; rows-mcp.jsx reads it. -->
+  <script src="app/mcp.js"></script>
   <!-- Per-tab PR feedback deduplication and cancellable monitoring. -->
   <script src="app/pr-automation.js"></script>
 
@@ -333,7 +352,7 @@
        branch-menu.jsx); called at render time. -->
   <script src="design/ui/use-menu-pick.js"></script>
   <!-- Pointer drag-to-reorder (#40) for the tab bar, the group chip's
-       dropdown and the project sidebar: chrome.jsx and project-sidebar.jsx
+       dropdown and the Workspaces view: chrome.jsx and workspaces-view.jsx
        call window.useDragReorder at render time, tab-group-chip.jsx gets
        TabBar's. Destructures window.OMP_DRAG_REORDER at load. -->
   <script src="design/ui/use-drag-reorder.js"></script>
@@ -383,16 +402,18 @@
   <!-- ask-bubble.jsx destructures window.AskDialog at top level. -->
   <script type="text/babel" src="design/chat/ask-dialog.jsx"></script>
   <script type="text/babel" src="design/chat/ask-bubble.jsx"></script>
-  <!-- chat-view.jsx destructures window.RetryRow, window.GoalRow and
-       window.ApprovalRow at top level. -->
+  <!-- chat-view.jsx destructures window.RetryRow, window.GoalRow,
+       window.ApprovalRow and window.ProcessDetailsGroup at top level. -->
   <script type="text/babel" src="design/chat/retry-row.jsx"></script>
   <script type="text/babel" src="design/chat/goal-row.jsx"></script>
   <script type="text/babel" src="design/chat/approval-row.jsx"></script>
   <script type="text/babel" src="design/chat/plan-pill.jsx"></script>
+  <script type="text/babel" src="design/chat/process-details.jsx"></script>
   <script type="text/babel" src="design/chat/chat-view.jsx"></script>
   <!-- Subagent manager UI. bits → controls → inspector (destructures the
        controls) → pane (destructures the inspector) → rail card; all before
-       chrome.jsx, whose AmbientRail destructures SubagentRailCard at top level. -->
+       design/side-views/session-view.jsx, whose SessionView destructures
+       SubagentRailCard at top level. -->
   <script type="text/babel" src="design/subagents/subagent-bits.jsx"></script>
   <script type="text/babel" src="design/subagents/subagent-controls.jsx"></script>
   <script type="text/babel" src="design/subagents/subagent-inspector.jsx"></script>
@@ -438,7 +459,7 @@
        at top level, so this must load before it. -->
   <script type="text/babel" src="design/profile-menu.jsx"></script>
   <!-- Inline conversation-name editor (#32) — tab-group-chip.jsx, chrome.jsx
-       and project-sidebar.jsx destructure window.RenameField at top level,
+       and workspaces-view.jsx destructure window.RenameField at top level,
        so this must load before all three. -->
   <script type="text/babel" src="design/rename-field.jsx"></script>
   <!-- Grouped tab-bar chip (#27) — chrome.jsx destructures
@@ -453,9 +474,11 @@
   <!-- App toolbar between the title bar and the tabs; app-live.jsx
        destructures window.Toolbar. -->
   <script type="text/babel" src="design/toolbar.jsx"></script>
-  <!-- Project sidebar (#27); reads window.TabRunDot / window.TabLabel
-       (tab-group-chip.jsx) and window.OMP_PROJECT_NAV at top level. -->
-  <script type="text/babel" src="design/project-sidebar.jsx"></script>
+  <!-- Activity bar + Workspaces side view (replaces project sidebar);
+       activity-bar needs Icon + OMP_ACTIVITY; workspaces-view needs
+       TabRunDot / TabLabel (tab-group-chip.jsx) and OMP_PROJECT_NAV. -->
+  <script type="text/babel" src="design/activity-bar.jsx"></script>
+  <script type="text/babel" src="design/workspaces-view.jsx"></script>
   <!-- Start screens: art.js (plain IIFE, window.OMP_BACKDROP_ART: the
        offscreen canvases, halo and env.logo helpers), which the canvas host
        destructures at top level; one renderer per screen (plain IIFEs
@@ -496,6 +519,13 @@
        app-live.jsx destructures FilesPanel. -->
   <script type="text/babel" src="design/files/file-code.jsx"></script>
   <script type="text/babel" src="design/files/files-panel.jsx"></script>
+  <!-- Files activity view (side panel tree): destructures GitFileTree and
+       Icon at top level, both loaded above. -->
+  <script type="text/babel" src="design/files/files-view.jsx"></script>
+  <!-- Session activity view (side panel accordion): destructures the rail
+       cards (chrome.jsx), SubagentRailCard, PrAutomationCard, the widget
+       cards and OMP_SESSION_VIEW at top level — all loaded above. -->
+  <script type="text/babel" src="design/side-views/session-view.jsx"></script>
   <!-- Approvals panel's mode section (#57); approval-rules-panel.jsx
        destructures window.ApprovalModeSection at top level. -->
   <script type="text/babel" src="design/approval-mode-section.jsx"></script>
@@ -537,6 +567,13 @@
        (app/intelligence.js) and window.useIntelligence
        (app/use-intelligence.jsx, a hook loaded later) late-bound. -->
   <script type="text/babel" src="design/settings/rows-intelligence.jsx"></script>
+  <!-- Settings → Models provider editor; reads window.OMP_MODELS
+       (app/models.js) and window.useModels (app/use-models.jsx, loaded
+       later) late-bound. -->
+  <script type="text/babel" src="design/settings/rows-models.jsx"></script>
+  <!-- Settings → MCP rows; reads window.OMP_MCP (app/mcp.js) and
+       window.useMcp (app/use-mcp.jsx, loaded later) late-bound. -->
+  <script type="text/babel" src="design/settings/rows-mcp.jsx"></script>
   <script type="text/babel" src="design/settings/rows-session.jsx"></script>
   <script type="text/babel" src="design/settings/rows-approvals.jsx"></script>
   <script type="text/babel" src="design/settings/rows-remote-shared.jsx"></script>
@@ -588,6 +625,13 @@
        window.OMP_INTELLIGENCE late-bound (rows-intelligence.jsx, loaded
        earlier, resolves window.useIntelligence at render time). -->
   <script type="text/babel" src="app/use-intelligence.jsx"></script>
+  <!-- Settings → Models shared snapshot; reads window.OMP_MODELS
+       late-bound (rows-models.jsx resolves window.useModels at render
+       time). -->
+  <script type="text/babel" src="app/use-models.jsx"></script>
+  <!-- Settings → MCP shared snapshot; reads window.OMP_MCP late-bound
+       (rows-mcp.jsx resolves window.useMcp at render time). -->
+  <script type="text/babel" src="app/use-mcp.jsx"></script>
   <!-- Rail widgets hook; destructures window.OMP_WIDGETS at top level. -->
   <script type="text/babel" src="app/use-widgets.jsx"></script>
   <!-- Per-tab terminal lifecycle (xterm instances, pty listeners);

@@ -25,6 +25,8 @@
     { id: "aurora", tone: "dark", accent: "#8AF0C8" },
     { id: "phosphor", tone: "dark", accent: "#C4FF3F" },
     { id: "daylight", tone: "light", accent: "#1F8A5B" },
+    { id: "visualstudio", tone: "light", accent: "#007ACC" },
+    { id: "eyecare", tone: "light", accent: "#2E8B57" },
   ]);
   const ACCENTS = Object.freeze(["#8AF0C8", "#6EE7FF", "#FF7AC6", "#FFC56E", "#B59BFF", "#C4FF3F"]);
   /** The accent a theme ships with; picking the theme resets to it. */
@@ -51,7 +53,7 @@
           { options: opts(["auto", "en", "zh"], { auto: "Follow system", en: "English", zh: "中文" }) }),
       ] },
       { name: "Theme", rows: [
-        tweak("theme", "themes", "Theme", "Picking a theme also resets the accent to the theme's own.", "dark light colour color aurora phosphor daylight"),
+        tweak("theme", "themes", "Theme", "Picking a theme also resets the accent to the theme's own.", "dark light colour color aurora phosphor daylight visualstudio studio vs eyecare green"),
         tweak("accent", "swatches", "Accent", "Focus rings, the active tab, links and the assistant's marks.", "color colour highlight"),
         custom("projectAppearance", "Project colours", "Theme and accent for the rendered tab's project; other projects keep the global appearance above.", "per project folder palette brand sidebar"),
         tweak("startScreen", "screens", "Start screen", "The animated screen behind the logo while no tab is open. It follows the theme and accent.", "welcome backdrop empty animation matrix latent embedding next token sampling agent loop orbit forward pass neural attention transformer self-attention",
@@ -71,7 +73,7 @@
           { options: opts(["rail", "split", "focus"]) }),
         tweak("defaultSide", "seg", "New tabs show", "What the side column of a newly opened tab starts with. The toolbar still switches it per tab.", "conversation tree default browser",
           { options: opts(["rail", "tree", "browser"]) }),
-        tweak("sidebar", "toggle", "Project sidebar", "The list of projects and their tabs on the left. `Ctrl+B` toggles it.", "projects"),
+        tweak("sidebar", "toggle", "Side panel", "Show the activity bar's side panel (Workspaces, Files, Session). `Ctrl+B` toggles it. The activity bar itself stays visible.", "projects workspaces activity"),
         custom("widths", "Column widths", "Drag a column edge to resize it, double-click the edge to reset one.", "width resize pane sidebar rail tree files split browser",
           { keys: ["sidebarWidth", "railWidth", "treeWidth", "filesWidth", "splitWidth", "browserWidth"] }),
       ] },
@@ -92,6 +94,9 @@
           get min() { return collapse()?.MIN_AFTER ?? 1; },
           get max() { return collapse()?.MAX_AFTER ?? 30; },
         }),
+        tweak("hideToolActivity", "toggle", "Hide tool activity while working", "Fold a running turn's tool calls into one Process details row, the same way a finished turn folds them. Expand the row to see each call and its result.", "process details fold working"),
+        tweak("showToolCallsUnfolded", "toggle", "Show tool calls outside Process details", "Keep each tool call's row visible in the transcript instead of folding it into Process details. Whether the card opens is still set by Tool output above.", "process details tool calls"),
+        tweak("neverFoldActivity", "toggle", "Never fold tool activity", "Show thinking, tool calls and notices as their own rows in every turn instead of folding them into Process details. Overrides Hide tool activity while working.", "process details never fold"),
       ] },
       { name: "Scrolling", rows: [
         tweak("followOutput", "toggle", "Follow new output", "Keep the transcript scrolled to the newest message while the agent works. Scrolling up always pauses it.", "auto scroll bottom pin"),
@@ -185,6 +190,19 @@
       ] },
       { name: "Model roles", src: "omp config", rows: [
         custom("modelRoles", "Model roles", "Which model each role runs, as `provider/model`. Leave a role empty to keep omp's own choice.", "model roles advisor smol vision plan designer commit tiny task"),
+      ] },
+    ] },
+    { id: "models", icon: "tokens", title: "Models", blurb: "Custom model providers in the active profile's models.yml: their base URLs, keys and the models they serve. A change applies to tabs started after it.", groups: [
+      { name: "Providers", src: "models.yml", rows: [
+        custom("providers", "Custom providers", "Each provider serves its own models through a base URL; a key is needed unless auth is `none`. Keys are stored in models.yml and never shown again.", "providers models.yml api key baseUrl custom openai anthropic"),
+      ] },
+    ] },
+    { id: "mcp", icon: "context", title: "MCP", blurb: "MCP servers omp connects to: the profile's own list, and the open project's. A change applies to tabs started after it.", groups: [
+      { name: "User servers", src: "mcp.json", rows: [
+        custom("mcpUser", "MCP servers", "Stdio servers run a command; HTTP and SSE servers connect to a URL. Keys and environment variables live in the file and are never shown here.", "mcp servers stdio http sse tools json"),
+      ] },
+      { name: "Project servers", rows: [
+        custom("mcpProject", "This project's servers", "Read from the project's mcp.json beside the conversation; edit it in the repo so it stays committed.", "project mcp json"),
       ] },
     ] },
     { id: "session", icon: "clock", title: "Session", blurb: "Tabs across restarts, closing, naming and app updates.", groups: [
