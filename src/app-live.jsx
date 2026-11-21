@@ -72,7 +72,6 @@ function App() {
   // opened in — it shows only while that tab is active.
   const [preview,     setPreview]     = React.useState(null);
   const [rulesOpen,   setRulesOpen]   = React.useState(false);
-  const [statsOpen,   setStatsOpen]   = React.useState(false);
   const [promptHistoryOpen, setPromptHistoryOpen] = React.useState(false);
   // The Settings app tab (#37; app/settings-tab.js): `{open, active,
   // section}`. Not an omp tab: the active omp tab stays `activeSessionId`
@@ -269,7 +268,8 @@ function App() {
     fn => setPlans(m => updateEntry(m, planKey, PLAN_IDLE, fn)), [planKey]);
   const handleAnnotate = React.useCallback(
     (idx, value) => updatePlan(p => annotatePlan(p, idx, value)), [updatePlan]);
-  // "rail" (the idle entry, also with no tab open), "tree", "browser" or "files".
+  // "rail" (the idle entry, also with no tab open), "browser" or "files" —
+  // the conversation tree lives in the tool dock now (phase 3).
   const side = entryOf(sides, planKey, "rail");
   const setSide = React.useCallback(
     next => setSides(m => updateEntry(m, planKey, "rail", () => next)), [planKey]);
@@ -351,7 +351,10 @@ function App() {
     seenSideIds.current = new Set(sessionIds);
     setPlans(m => pruneEntries(m, sessionIds));
     setCollapseOverrides(m => pruneEntries(m, sessionIds));
-    setSides(m => seedEntries(pruneEntries(m, sessionIds), fresh, "rail", t.defaultSide ?? "rail"));
+    setSides(m => seedEntries(pruneEntries(m, sessionIds), fresh, "rail",
+      // A stored "tree" default seeds a side column that no longer exists;
+      // the tree lives in the tool dock now.
+      (t.defaultSide === "tree" ? "rail" : t.defaultSide) ?? "rail"));
     setSvFolds(m => pruneEntries(m, sessionIds));
   }, [sessionIds]);
   React.useEffect(() => {
@@ -750,7 +753,7 @@ function App() {
   // draft). `sessionFile` comes with every snapshot's tab entry: it changes
   // when branch/fork/new move the process onto another file, which refetches.
   const convTree = useConversationTree({
-    bridge, open: side === "tree", sessionId: activeProject.id, sessionFile: activeProject.sessionFile ?? null,
+    bridge, open: _dockIsOpen(dock) && dock.tab === "tree", sessionId: activeProject.id, sessionFile: activeProject.sessionFile ?? null,
     profileId: activeProfileId, processStartedAt: activeProject.processStartedAt ?? null,
     streaming, onBranchText: text => setPromptInsert({ text, nonce: Date.now() }),
   });
@@ -767,7 +770,7 @@ function App() {
     else if (c.name === "live")      { return handleLiveAction(args); }
     else if (c.name === "browser")   { handleBrowserCommand(args); }
     else if (c.name === "compact")   { bridge?.compact(); }
-    else if (c.name === "tree" || c.name === "branch") { setSide("tree"); }
+    else if (c.name === "tree" || c.name === "branch") { dockSelect("tree"); }
     else if (c.name === "export")    { bridge?.exportHtml(); }
     else if (c.name === "thinking")  { cycleThinking(); }
     else if (c.name === "model")     { openBridge("models"); }
@@ -963,7 +966,7 @@ function App() {
     "app.interrupt":           () => {
       // Only abort when no overlay is open (overlays handle Escape themselves),
       // and never from the Settings page, which covers the chat.
-      if (stab.active || bridgeOpen || historyOpen || gitOpen || rulesOpen || statsOpen || promptHistoryOpen || updater.open) return;
+      if (stab.active || bridgeOpen || historyOpen || gitOpen || rulesOpen || promptHistoryOpen || updater.open) return;
       if (planOpen) { setPlanOpen(false); return; }
       if (streaming) handleAbort();
     },
@@ -999,7 +1002,7 @@ function App() {
     "desktop.panel.todo":      () => setPlanOpen(v => !v),
     "desktop.panel.changes":   () => setGitOpen(v => (v ? null : { path: null })),
     "desktop.panel.rules":     () => setRulesOpen(v => !v),
-    "desktop.panel.stats":     () => setStatsOpen(v => !v),
+    "desktop.panel.stats":     () => dockSelect("usage"),
     "desktop.composer.promptHistory": () => setPromptHistoryOpen(v => !v),
     "desktop.session.compact": () => bridge?.compact(),
     "desktop.session.export":  () => bridge?.exportHtml(),
@@ -1062,7 +1065,7 @@ function App() {
   // second right column (decisions 17, phase-2 plan 2.3).
   const widgetUI = !!widgets.fatal || widgets.configErrors.length > 0 ||
     widgets.approvals.length > 0 || widgets.cards.length > 0;
-  const sideRail = side === "tree" || side === "files" ? side
+  const sideRail = side === "files" ? side
     : side !== "browser" && showRail && widgetUI && !sessionViewShown ? "rail" : null;
   const panes = usePaneWidths({
     tweaks: t, setTweak, workspaceRef,
@@ -1138,10 +1141,6 @@ function App() {
               onOpenProject: openWorkspaceBrowse, onHistory: () => setHistoryOpen(true),
             }}
             subagents={{ open: showSplit, onToggle: subagentUi.togglePane }}
-            tree={{
-              open: side === "tree", onToggle: () => toggleSide("tree"),
-              onRefresh: convTree.refresh, canRefresh: !convTree.loading && !!convTree.key,
-            }}
             browser={{
               open: side === "browser", onToggle: () => toggleSide("browser"),
               annotate: browser.annotate, canAnnotate: browser.state.status === "running", onAnnotate: browser.setAnnotate,
@@ -1150,7 +1149,6 @@ function App() {
             terminal={{ open: _TERM_entryOf(terminal.state, planKey).open, onToggle: () => terminal.toggle(planKey) }}
             onGit={() => setGitOpen({ path: null })}
             approvals={{ cell: approvalCell, onOpen: () => setRulesOpen(true) }}
-            onStats={() => setStatsOpen(true)}
             onCommands={() => setBridgeOpen(true)}
             profile={{
               profiles, activeId: activeProfileId, startupId: startupProfileId,
@@ -1322,13 +1320,6 @@ function App() {
                   onClose={() => setFilesOpen(false)}
                   onReference={path => setPromptInsert({ text: "@" + path, append: true, sessionId: planKey, nonce: Date.now() })}
                   onReveal={path => bridge.revealProjectFile(path)} />
-              ) : side === "tree" ? (
-                <ConversationTree
-                  model={convTree.model} currentFile={convTree.currentFile} error={convTree.error}
-                  loading={convTree.loading} treeKey={convTree.key} now={convTree.now} since={convTree.since}
-                  streaming={streaming}
-                  onBranch={convTree.branch} onFork={convTree.fork} onOpenFile={convTree.openFile}
-                />
               ) : showRail && widgetUI && (
                 <aside className="rail" aria-label={OMP_TR("rail widgets")}>
                   {widgetCards}
@@ -1344,11 +1335,19 @@ function App() {
             <ToolDock
               tab={dock.tab}
               open={_dockIsOpen(dock)}
-              label={dock.tab === "file" ? "File" : "Session"}
-              head={dock.tab === "session"}
+              label={dock.tab === "file" ? "File" : dock.tab === "session" ? "Session" : dock.tab === "tree" ? "Tree" : "Usage"}
+              head={dock.tab === "session" || dock.tab === "tree"}
               onSelect={dockSelect}
               onClose={dock.tab === "file" ? closePreview : dockClose}
               resize={panes.handle("dock")}
+              actions={dock.tab === "tree" && (
+                <button type="button" className="btn ghost icon dock-pane-close"
+                  title={OMP_TR("refresh conversation tree")} aria-label={OMP_TR("refresh")}
+                  disabled={!convTree.key || convTree.loading}
+                  onClick={convTree.refresh}>
+                  <Icon name="refresh" size={11} />
+                </button>
+              )}
             >
               {dock.tab === "file" ? (
                 preview && preview.key === planKey ? (
@@ -1357,7 +1356,7 @@ function App() {
                 ) : (
                   <div className="dock-pane-stub">{OMP_TR("Open a file from the chat or the explorer.")}</div>
                 )
-              ) : (
+              ) : dock.tab === "session" ? (
                 <>
                   <div className="dock-session">
                     <SessionView
@@ -1381,6 +1380,20 @@ function App() {
                   </div>
                   {widgetUI && <div className="dock-widgets">{widgetCards}</div>}
                 </>
+              ) : dock.tab === "tree" ? (
+                <div className="dock-tree">
+                  <ConversationTree
+                    model={convTree.model} currentFile={convTree.currentFile} error={convTree.error}
+                    loading={convTree.loading} treeKey={convTree.key} now={convTree.now} since={convTree.since}
+                    streaming={streaming}
+                    onBranch={convTree.branch} onFork={convTree.fork} onOpenFile={convTree.openFile}
+                  />
+                </div>
+              ) : (
+                // Keyed on the profile: `refresh` only runs on mount /
+                // refresh-click, so a switch to a different profile must
+                // remount the panel to drop the previous one's numbers.
+                <UsageStatsPanel key={activeProfileId} docked onClose={dockClose} profileLabel={activeProfileLabel} />
               )}
             </ToolDock>
           </div>
@@ -1435,15 +1448,6 @@ function App() {
           sessions={sessions}
           approvalModes={approvalModes}
         />
-      )}
-
-      {statsOpen && (
-        // Keyed on the profile, not just mounted once: `refresh` only runs
-        // on mount/refresh-click (deps [bridge]), so without this a tab
-        // switch to a different profile while the panel is open would
-        // update the header's profileLabel but leave the previous
-        // profile's numbers showing underneath it.
-        <UsageStatsPanel key={activeProfileId} onClose={() => setStatsOpen(false)} profileLabel={activeProfileLabel} />
       )}
 
       {promptHistoryOpen && (

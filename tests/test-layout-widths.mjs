@@ -45,13 +45,6 @@ check("only open panes get a width", () => {
   assert.deepEqual(L.fit({ sidebar: 300, split: 400 }, ["split"], 1600), { split: 400 });
 });
 
-check("the tree defaults to at most half the stage beside the sidebar", () => {
-  assert.equal(L.fit({}, ["tree"], 1600).tree, 540);
-  assert.equal(L.fit({}, ["sidebar", "tree"], 1100).tree, 440, "(1100 - 220) / 2");
-  assert.equal(L.fit({}, ["tree"], 500).tree, 320, "never below its minimum");
-  assert.equal(L.fit({ tree: 700 }, ["sidebar", "tree"], 1600).tree, 700, "a saved width is not halved");
-});
-
 check("panes give up room in proportion to their slack so the chat keeps CHAT_MIN", () => {
   // 300 + 400 = 700, room for panes 1000 - 420 = 580 → over by 120.
   // Slack: 140 + 160 = 300; each gives 120 / 300 of its slack: 56 and 64.
@@ -97,21 +90,21 @@ check("a resize saves the layout shown: the panes the window squeezed keep their
 });
 
 check("a resize leaves the panes that would stay as shown alone (a default stays 0)", () => {
-  const open = ["sidebar", "tree"];
-  const saved = { sidebar: 0, tree: 0 };
+  const open = ["sidebar", "rail"];
+  const saved = { sidebar: 0, rail: 0 };
   const widths = L.fit(saved, open, 1600);
-  assert.deepEqual(widths, { sidebar: 220, tree: 540 });
+  assert.deepEqual(widths, { sidebar: 220, rail: 280 });
   assert.deepEqual(L.settle("sidebar", 260, widths, saved, open, 1600), { sidebar: 260 });
 });
 
-check("a sidebar resize keeps a default tree, which halves the stage, where it is shown", () => {
-  const open = ["sidebar", "tree"];
-  const saved = { sidebar: 0, tree: 0 };
+check("a sidebar resize keeps a default dock pane where it is shown", () => {
+  const open = ["sidebar", "dock"];
+  const saved = { sidebar: 0, dock: 0 };
   const shown = L.fit(saved, open, 1100);
-  assert.equal(shown.tree, 440, "(1100 - 220) / 2");
+  assert.deepEqual(shown, { sidebar: 220, dock: 300 }, "the wide defaults");
   const patch = L.settle("sidebar", 200, shown, saved, open, 1100);
-  assert.deepEqual(patch, { sidebar: 200, tree: 440 }, "unsaved, it would grow to (1100 - 200) / 2");
-  assert.deepEqual(L.fit({ ...saved, ...patch }, open, 1100), { sidebar: 200, tree: 440 }, "nothing moves once saved");
+  assert.deepEqual(patch, { sidebar: 200 }, "the dock pane would ask for what it already shows");
+  assert.deepEqual(L.fit({ ...saved, ...patch }, open, 1100), { sidebar: 200, dock: 300 }, "nothing moves once saved");
 });
 
 check("keys: the arrow pointing away from the pane grows it", () => {

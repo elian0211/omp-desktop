@@ -29,8 +29,8 @@ function check(label, fn) {
 
 const closed = { tab: null, open: false };
 
-check("membership is file then session in phase 2", () => {
-  assert.deepEqual(D.MEMBERS, ["file", "session"]);
+check("membership is file, session, tree, usage in display order", () => {
+  assert.deepEqual(D.MEMBERS, ["file", "session", "tree", "usage"]);
 });
 
 check("a fresh dock shows no pane", () => {

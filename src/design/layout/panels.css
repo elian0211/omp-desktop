@@ -151,6 +151,15 @@
   width: min(680px, calc(100vw - 40px));
   max-height: min(600px, calc(100vh - 140px));
 }
+/* Docked in the tool dock's Usage pane: the pane frame replaces the card's
+   own chrome, the body scrolls. */
+.stats-panel.docked {
+  flex: 1; min-height: 0;
+  width: 100%; max-width: none; max-height: none;
+  border: 0; border-radius: 0; box-shadow: none;
+  background: transparent;
+}
+.stats-panel.docked .stats-body { flex: 1; min-height: 0; overflow-y: auto; }
 .stats-body {
   padding: 14px;
 }

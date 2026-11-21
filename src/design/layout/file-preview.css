@@ -9,15 +9,8 @@
 .tool-images { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 12px 10px; }
 .tool-images .user-image { max-height: 120px; max-width: 220px; }
 
-.fp-scrim {
-  position: fixed; inset: 0;
-  z-index: 200;
-  display: grid; place-items: center;
-  background: color-mix(in oklab, var(--bg-app) 78%, transparent);
-  backdrop-filter: blur(10px);
-  outline: none;
-  animation: lbScrimIn 200ms var(--ease-out);
-}
+/* The panel fills the tool dock's File pane (docked presentation); the
+   modal scrim of the old preview is gone. */
 .fp-panel {
   width: min(1100px, 88vw); height: min(800px, 86vh);
   display: flex; flex-direction: column; gap: 10px;
@@ -108,5 +101,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fp-scrim, .fp-panel { animation: none; }
+  .fp-panel { animation: none; }
 }

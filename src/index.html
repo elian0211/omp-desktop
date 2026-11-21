@@ -133,19 +133,15 @@
 
   <!-- Project navigation (issue #27): pure tab grouping/lookup helpers, plus
        the history panel's per-project filter chips (#35). Dependency-free
-       IIFE; design/chrome.jsx, design/tab-group-chip.jsx,
-       design/workspaces-view.jsx and design/history-modal.jsx destructure
+       IIFE; design/chrome.jsx, design/project-side.jsx,
+       design/project-strip.jsx and design/history-modal.jsx destructure
        window.OMP_PROJECT_NAV at top level and live.js calls it, so it must
        load before all of them. -->
   <script src="app/project-nav.js"></script>
 
-  <!-- Activity bar view ids / select-collapse (workspaces layout plan).
-       design/activity-bar.jsx and app-live.jsx read window.OMP_ACTIVITY. -->
-  <script src="app/activity.js"></script>
-
   <!-- Per-project appearance: theme/accent overrides keyed by project folder.
        Depends on project-nav's normPath; app/use-bridge-snapshot.jsx,
-       design/workspaces-view.jsx and design/settings/rows-appearance.jsx
+       design/project-strip.jsx and design/settings/rows-appearance.jsx
        read it late-bound, so it must load before live.js and the settings
        page. -->
   <script src="app/project-appearance.js"></script>
@@ -355,10 +351,10 @@
   <!-- A dropdown pick that runs an async action (thinking-menu.jsx,
        branch-menu.jsx); called at render time. -->
   <script src="design/ui/use-menu-pick.js"></script>
-  <!-- Pointer drag-to-reorder (#40) for the tab bar, the group chip's
-       dropdown and the Workspaces view: chrome.jsx and workspaces-view.jsx
-       call window.useDragReorder at render time, tab-group-chip.jsx gets
-       TabBar's. Destructures window.OMP_DRAG_REORDER at load. -->
+  <!-- Pointer drag-to-reorder (#40) for the thin session tab strip and the
+       project side's Sessions fold: chrome.jsx and project-side.jsx call
+       window.useDragReorder at render time. Destructures
+       window.OMP_DRAG_REORDER at load. -->
   <script src="design/ui/use-drag-reorder.js"></script>
   <!-- A panel edge dragged to resize it: terminal-panel.jsx,
        browser-dock.jsx and app/use-pane-widths.jsx call window.useEdgeDrag
@@ -462,14 +458,13 @@
   <!-- Per-tab profile selector — toolbar.jsx destructures window.ProfileMenu
        at top level, so this must load before it. -->
   <script type="text/babel" src="design/profile-menu.jsx"></script>
-  <!-- Inline conversation-name editor (#32) — tab-group-chip.jsx, chrome.jsx
-       and workspaces-view.jsx destructure window.RenameField at top level,
-       so this must load before all three. -->
+  <!-- Inline conversation-name editor (#32) — project-side.jsx destructures
+       window.RenameField at top level, so this must load before it. -->
   <script type="text/babel" src="design/rename-field.jsx"></script>
-  <!-- Grouped tab-bar chip (#27) — chrome.jsx destructures
-       window.TabGroupChip / window.TabRunDot / window.TabLabel at top level,
-       so this must load before it. -->
-  <script type="text/babel" src="design/tab-group-chip.jsx"></script>
+  <!-- Tab run-state dot — chrome.jsx, project-strip.jsx and project-side.jsx
+       destructure window.TabRunDot at top level, so this must load before
+       all three. -->
+  <script type="text/babel" src="design/tab-run-dot.jsx"></script>
   <!-- The status bar's branch pill and picker: chrome.jsx destructures
        window.BranchMenu at top level, and it destructures OMP_GIT_BROWSER
        (app/git-browser.js) and calls usePopoverDismiss. -->
@@ -478,10 +473,6 @@
   <!-- App toolbar between the title bar and the tabs; app-live.jsx
        destructures window.Toolbar. -->
   <script type="text/babel" src="design/toolbar.jsx"></script>
-  <!-- Activity bar + Workspaces kept for phase-2 harvest; project strip /
-       project side load after FilesView (see below). -->
-  <script type="text/babel" src="design/activity-bar.jsx"></script>
-  <script type="text/babel" src="design/workspaces-view.jsx"></script>
   <!-- Start screens: art.js (plain IIFE, window.OMP_BACKDROP_ART: the
        offscreen canvases, halo and env.logo helpers), which the canvas host
        destructures at top level; one renderer per screen (plain IIFEs

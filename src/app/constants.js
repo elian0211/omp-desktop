@@ -14,7 +14,7 @@
   // `hideToolActivity` / `showToolCallsUnfolded` / `neverFoldActivity`:
   // turn-level Process details fold (OMP_PROCESS_DETAILS; Settings → Chat).
   // `browserWidth`: px of the browser panel, 0 = half the stage (OMP_BROWSER.clampWidth).
-  // `sidebarWidth` / `splitWidth` / `railWidth` / `treeWidth` / `filesWidth`: px of those
+  // `sidebarWidth` / `splitWidth` / `railWidth` / `filesWidth` / `dockWidth`: px of those
   // columns, 0 = the default (OMP_LAYOUT_WIDTHS.fit).
   // `browserLocalhostInPanel`: a plain click on a localhost chat link opens
   // the panel instead of the system browser. (The Chromium path is a Rust
@@ -59,8 +59,8 @@
     "sidebarWidth": 0,
     "splitWidth": 0,
     "railWidth": 0,
-    "treeWidth": 0,
     "filesWidth": 0,
+    "dockWidth": 0,
     "defaultSide": "rail",
     "terminalAutoOpen": false,
     "terminalHeight": 240,

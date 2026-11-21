@@ -1,47 +1,6 @@
-/* Activity bar + side panel (workspace layout redesign) ───────────── */
-
-.activity-bar {
-  width: var(--w-activity, 48px); flex: none; min-height: 0;
-  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
-  padding: 6px 0;
-  border-right: 1px solid var(--line);
-  background: var(--bg-window);
-  z-index: 2;
-}
-
-.activity-btn {
-  position: relative;
-  appearance: none; border: 0; background: transparent;
-  width: 100%; height: 40px; padding: 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  color: var(--fg-4); cursor: pointer;
-}
-.activity-btn::before {
-  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2px;
-  border-radius: 0 2px 2px 0; background: transparent;
-}
-.activity-btn:hover { color: var(--fg-2); background: var(--bg-hover); }
-.activity-btn.active { color: var(--fg); background: var(--bg-surface); }
-.activity-btn.active::before { background: var(--accent); }
-.activity-btn:focus-visible {
-  outline: 2px solid var(--accent); outline-offset: -2px;
-}
-
-/* Title bubble to the right of the icon (plan: hover tip, not icon-only). */
-.activity-tip {
-  display: none;
-  position: absolute; left: calc(100% + 10px); top: 50%;
-  transform: translateY(-50%);
-  z-index: 20; pointer-events: none;
-  padding: 4px 8px; white-space: nowrap;
-  background: var(--bg-elevated);
-  border: 1px solid var(--line-bright);
-  border-radius: var(--r-1);
-  box-shadow: 0 4px 12px color-mix(in oklab, #000 35%, transparent);
-  font-size: var(--d-text-xs); color: var(--fg);
-}
-.activity-btn:hover .activity-tip,
-.activity-btn:focus-visible .activity-tip { display: block; }
+/* Project side + side-view chrome (files tree, Session dock accordion).
+   The activity bar itself retired with the project strip — its list
+   chrome lives on (2026-11-21 project-dock-layout). */
 
 .side-panel {
   width: var(--w-sidebar, 220px); flex: none; min-height: 0; min-width: 0;

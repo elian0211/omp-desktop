@@ -6,9 +6,9 @@
    caller's close (the File pane's own head closes the preview instead —
    no second ×). Dock state lives in app/tool-dock.js. */
 
-const DOCK_MEMBERS = [["file", "File"], ["session", "Session"]];
+const DOCK_MEMBERS = [["file", "File"], ["session", "Session"], ["tree", "Tree"], ["usage", "Usage"]];
 
-function ToolDock({ tab, open, label, head, onSelect, onClose, resize, children }) {
+function ToolDock({ tab, open, label, head, actions, onSelect, onClose, resize, children }) {
   const active = open ? tab : null;
   return (
     <>
@@ -21,6 +21,7 @@ function ToolDock({ tab, open, label, head, onSelect, onClose, resize, children 
           {head && (
             <div className="dock-pane-head">
               <span className="dock-pane-title">{OMP_TR(label)}</span>
+              {actions}
               <button type="button" className="btn ghost icon dock-pane-close"
                 title={OMP_TR("Close (Esc)")} aria-label={OMP_TR("Close")}
                 onClick={onClose}>

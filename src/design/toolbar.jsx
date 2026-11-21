@@ -58,16 +58,15 @@ function ApprovalModeButton({ cell, onClick }) {
 
 /**
  * nav:      { sidebarOpen, onToggleSidebar, onOpenProject, onHistory }
- * subagents, terminal: { open, onToggle } (the rail button is gone — the
- *            Session activity view lives on the activity bar)
- * tree:     { open, onToggle, onRefresh, canRefresh }
+ * subagents, terminal: { open, onToggle }
+ *           (the conversation tree and usage statistics are tool dock tabs
+ *           now; the rail button is gone — session tools live in the dock)
  * browser:  { open, onToggle, annotate, canAnnotate, onAnnotate(on), fullView, onFullView(on) }
- * files:    removed — the file tree lives in the activity bar's Files view
- * approvals: { cell, onOpen }; onGit, onStats, onCommands
+ * approvals: { cell, onOpen }; onGit, onCommands
  * profile:  ProfileMenu's props (profiles, activeId, startupId, on…)
  * settings: { active, onOpen }
  */
-function Toolbar({ nav, subagents, tree, browser, terminal, onGit, approvals, onStats, onCommands, profile, settings }) {
+function Toolbar({ nav, subagents, browser, terminal, onGit, approvals, onCommands, profile, settings }) {
   const commands = _tbChord("desktop.commands.open");
   return (
     <div className="toolbar" role="toolbar" aria-label={OMP_TR("app toolbar")}>
@@ -79,12 +78,6 @@ function Toolbar({ nav, subagents, tree, browser, terminal, onGit, approvals, on
         <span className="tb-sep" />
 
         <ToolButton icon="agent" title={OMP_TR("subagent manager")} pressed={subagents.open} onClick={subagents.onToggle} />
-        <ToolButton icon="branch" title={OMP_TR("conversation tree (prompt-cache status)")} pressed={tree.open} onClick={tree.onToggle} />
-        {tree.open && (
-          <span className="tb-sub" role="group" aria-label={OMP_TR("conversation tree")}>
-            <ToolButton icon="refresh" title={OMP_TR("refresh conversation tree")} disabled={!tree.canRefresh} onClick={tree.onRefresh} />
-          </span>
-        )}
         <ToolButton icon="web" title={_tbTip("browser panel", "desktop.browser.toggle")} pressed={browser.open} onClick={browser.onToggle} />
         {browser.open && (
           <span className="tb-sub" role="group" aria-label={OMP_TR("browser panel")}>
@@ -98,7 +91,6 @@ function Toolbar({ nav, subagents, tree, browser, terminal, onGit, approvals, on
         <span className="tb-sep" />
 
         <ToolButton icon="diff2" title={_tbTip("git browser", "desktop.panel.changes")} onClick={onGit} />
-        <ToolButton icon="cost" title={_tbTip("usage statistics", "desktop.panel.stats")} onClick={onStats} />
         <ToolButton icon="cog" title={_tbTip("settings", "desktop.settings.open")}
           pressed={settings.active} onClick={settings.onOpen} />
       </div>

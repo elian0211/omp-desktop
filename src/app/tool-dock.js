@@ -1,7 +1,7 @@
 // app/tool-dock.js — the right tool dock's state (project-dock-layout
 // phase 2, docs/plans/2026-11-21-project-dock-layout/). No DOM:
-//   MEMBERS            the dock tabs in display order ("file", "session";
-//                      "tree" / "usage" join in phase 3)
+//   MEMBERS            the dock tabs in display order ("file", "session",
+//                      "tree", "usage")
 //   isOpen(dock)       whether a pane is shown
 //   tabOf(dock)        the active tab id, or null
 //   select(dock, id)   click on a tab: open the pane on `id`; re-clicking
@@ -12,7 +12,7 @@
 //                      so a re-click on it reopens the pane on it
 // `dock` is `{ tab, open }`; every function returns the next state.
 (function () {
-  const MEMBERS = ["file", "session"];
+  const MEMBERS = ["file", "session", "tree", "usage"];
 
   const isOpen = (dock) => !!(dock && dock.open && dock.tab);
   const tabOf = (dock) => (isOpen(dock) ? dock.tab : null);

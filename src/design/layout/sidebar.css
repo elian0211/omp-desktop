@@ -1,9 +1,9 @@
-/* Workspaces side view (was project sidebar, issue #27) ───────────── */
+/* Project side panel (was the Workspaces side view, issue #27) ─────── */
 
-/* Row below the tab bar: activity bar + side panel + stage. The side
+/* Row: project strip + project side + main column + stage. The side
    panel sits outside `.stage`, so stage grid templates are untouched.
    Width is `--w-sidebar` (app/use-pane-widths.jsx); the resize handle is
-   stage.css `.pane-resize.at-sidebar` (accounts for `--w-activity`). */
+   stage.css `.pane-resize.at-sidebar` (accounts for `--w-project-strip`). */
 .workspace { flex: 1; min-height: 0; display: flex; position: relative; }
 
 /* List chrome lives inside `.side-panel`; width/border come from activity.css. */

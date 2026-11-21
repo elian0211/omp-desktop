@@ -19,8 +19,8 @@ Choices still free **inside** [`decisions.md`](./decisions.md). Resolve at phase
 
 ## Phase 3 — Members / cleanup
 
-10. **Usage in dock** — full `UsageStatsPanel` UI or a denser subset?
-11. **Tree refresh control** — stay on toolbar when Tree dock open, or move into dock header only?
+10. **Usage in dock** — **Resolved: the full `UsageStatsPanel`**, docked (`docked` prop drops the scrim; the panel head keeps refresh + close).
+11. **Tree refresh control** — **Resolved: dock header** (a refresh button in the dock pane head when the Tree tab is open); the toolbar's tree cluster is gone.
 12. **`side === "files"` detail** vs File dock — exclusive always, or allow both briefly?
 13. **Git dock later** — track as follow-up issue; not blocking v1.
 

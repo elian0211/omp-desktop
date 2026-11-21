@@ -23,7 +23,6 @@ const _PW_UI = {
   sidebar: { tweak: "sidebarWidth", label: "resize side panel", edge: "right" },
   split: { tweak: "splitWidth", label: "resize subagent pane", edge: "left" },
   rail: { tweak: "railWidth", label: "resize ambient rail", edge: "left" },
-  tree: { tweak: "treeWidth", label: "resize conversation tree", edge: "left" },
   files: { tweak: "filesWidth", label: "resize files panel", edge: "left" },
   dock: { tweak: "dockWidth", label: "resize tool dock", edge: "left" },
 };

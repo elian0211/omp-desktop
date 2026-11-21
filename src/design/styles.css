@@ -253,7 +253,7 @@
   background: #C8DBE9;
   border-bottom-color: #AEB2D1;
 }
-.theme-visualstudio .activity-bar {
+.theme-visualstudio .project-strip {
   background: #A7C6DB;
   border-right-color: #8FB2C9;
 }
@@ -358,7 +358,7 @@
   background: #DCEBE0;
   border-bottom-color: #B4C4B6;
 }
-.theme-eyecare .activity-bar {
+.theme-eyecare .project-strip {
   width: 40px;
   background: #C2D8C6;
   border-right-color: #A6BFA9;

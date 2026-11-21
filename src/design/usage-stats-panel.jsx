@@ -57,10 +57,10 @@ function displayFolder(folder) {
 
 const EMPTY = { overall: null, byModel: [], byFolder: [], byAgentType: [] };
 
-// Mounted only while open (app-live.jsx gates on `statsOpen`), so there
+// Mounted only while the dock's Usage tab is shown (app-live.jsx), so there
 // is no `open` prop and no early return for it — see the matching note
 // in approval-rules-panel.jsx.
-function UsageStatsPanel({ onClose, profileLabel }) {
+function UsageStatsPanel({ onClose, profileLabel, docked = false }) {
   const bridge = window.OMP_BRIDGE;
   const [data, setData]       = React.useState(EMPTY);
   const [loading, setLoading] = React.useState(false);
@@ -98,9 +98,10 @@ function UsageStatsPanel({ onClose, profileLabel }) {
 
   const overall = data.overall;
 
-  return (
-    <div className="bridge-scrim" onClick={onClose} style={{ paddingTop: "6vh" }}>
-      <div className="stats-panel" onClick={e => e.stopPropagation()}>
+  // Docked (tool dock's Usage pane, phase 3): no scrim, the panel fills
+  // the pane and keeps its own refresh / close head.
+  const panel = (
+    <div className={`stats-panel${docked ? " docked" : ""}`} onClick={docked ? undefined : e => e.stopPropagation()}>
         <div className="stats-head">
           <_StatsIcon name="cost" size={13} color="var(--accent)" />
           <span className="mono" style={{ color: "var(--fg-2)" }}>{OMP_TR("usage ·")} {profileLabel} {OMP_TR("· last 24h")}</span>
@@ -187,8 +188,10 @@ function UsageStatsPanel({ onClose, profileLabel }) {
             </>
           )}
         </div>
-      </div>
     </div>
+  );
+  return docked ? panel : (
+    <div className="bridge-scrim" onClick={onClose} style={{ paddingTop: "6vh" }}>{panel}</div>
   );
 }
 

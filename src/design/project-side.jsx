@@ -2,8 +2,18 @@
    (docs/plans/2026-11-21-project-dock-layout/). Not mutually exclusive
    activity views — both folds can be open. */
 
-const { Icon: _PSideIcon, TabRunDot: _PSideDot, RenameField: _PSideRename, FilesView, SidePanelStub } = window;
+const { Icon: _PSideIcon, TabRunDot: _PSideDot, RenameField: _PSideRename, FilesView } = window;
 const { membersNewestFirst: _psMembers } = window.OMP_PROJECT_NAV;
+
+/** The side panel's no-content hint (a fold with nothing to show yet). */
+function SidePanelStub({ title, hint }) {
+  return (
+    <div className="side-panel-stub">
+      <div className="psb-head">{title}</div>
+      <div className="side-panel-stub-body">{hint}</div>
+    </div>
+  );
+}
 
 function _PSideFold({ id, title, open, onToggle, children, grow }) {
   return (
@@ -108,4 +118,4 @@ function ProjectSide({
   );
 }
 
-Object.assign(window, { ProjectSide, ProjectSessionsFold });
+Object.assign(window, { ProjectSide, ProjectSessionsFold, SidePanelStub });

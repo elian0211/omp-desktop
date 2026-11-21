@@ -71,11 +71,11 @@
       { name: "Columns", rows: [
         tweak("layout", "seg", "Side column", "`rail` shows the widget rail, `split` opens a subagent beside the chat, `focus` shows the chat alone.", "layout rail split focus",
           { options: opts(["rail", "split", "focus"]) }),
-        tweak("defaultSide", "seg", "New tabs show", "What the side column of a newly opened tab starts with. The toolbar still switches it per tab.", "conversation tree default browser",
-          { options: opts(["rail", "tree", "browser"]) }),
-        tweak("sidebar", "toggle", "Side panel", "Show the activity bar's side panel (Workspaces, Files, Session). `Ctrl+B` toggles it. The activity bar itself stays visible.", "projects workspaces activity"),
-        custom("widths", "Column widths", "Drag a column edge to resize it, double-click the edge to reset one.", "width resize pane sidebar rail tree files split browser",
-          { keys: ["sidebarWidth", "railWidth", "treeWidth", "filesWidth", "splitWidth", "browserWidth"] }),
+        tweak("defaultSide", "seg", "New tabs show", "What the side column of a newly opened tab starts with. The toolbar still switches it per tab.", "side column default browser rail",
+          { options: opts(["rail", "browser"]) }),
+        tweak("sidebar", "toggle", "Side panel", "Show the project side panel (Sessions and Explorer folds). `Ctrl+B` toggles it.", "projects sessions explorer side"),
+        custom("widths", "Column widths", "Drag a column edge to resize it, double-click the edge to reset one.", "width resize pane sidebar rail dock files split browser",
+          { keys: ["sidebarWidth", "railWidth", "dockWidth", "filesWidth", "splitWidth", "browserWidth"] }),
       ] },
     ] },
     { id: "chat", icon: "thinking", title: "Chat", blurb: "How tool calls and thinking show up in the transcript.", groups: [

@@ -1,6 +1,6 @@
 // app/layout-widths.js — widths of the resizable columns beside the chat
-// (#41): the project sidebar, the subagent split pane, the ambient rail,
-// the conversation tree and the files panel. No DOM:
+// (#41): the project side panel, the subagent split pane, the ambient rail,
+// the files panel and the tool dock. No DOM:
 //   CHAT_MIN                     the chat column's minimum (also the browser
 //                                panel's, OMP_BROWSER.clampWidth)
 //   PANES                        per pane: min / max / default px
@@ -12,7 +12,7 @@
 //                                resize saves (the layout as shown)
 //   nudge(key, shift, edge, now)  a resize handle's keyboard step
 // A saved width is a tweak (`sidebarWidth`, `splitWidth`, `railWidth`,
-// `treeWidth`, `filesWidth`); 0 means the pane's default.
+// `filesWidth`, `dockWidth`); 0 means the pane's default.
 (function () {
   const CHAT_MIN = 420;
   // Below this window width the defaults are the narrower ones the stage
@@ -21,13 +21,10 @@
   const STEP = 16;
   const BIG_STEP = 64;
 
-  // `tree`'s default is also at most half the stage (the old
-  // `min(540px, 50%)`), see `preferredAll`.
   const PANES = {
     sidebar: { min: 160, max: 420, wide: 220, narrow: 188 },
     split: { min: 240, max: 560, wide: 320, narrow: 280 },
     rail: { min: 240, max: 520, wide: 280, narrow: 240 },
-    tree: { min: 320, max: 900, wide: 540, narrow: 540 },
     files: { min: 420, max: 1600, wide: 760, narrow: 560 },
     dock: { min: 240, max: 640, wide: 300, narrow: 260 },
   };
@@ -73,24 +70,18 @@
     return out;
   }
 
-  // Every open pane's `preferred` width; a default tree capped by the stage.
+  // Every open pane's `preferred` width.
   function preferredAll(wants, open, total, narrow) {
     const out = {};
     for (const name of open) out[name] = preferred(name, wants[name], narrow);
-    // The tree's default is at most half the stage, which the sidebar narrows.
-    const stage = total - (out.sidebar ?? 0);
-    if (out.tree != null && !isSaved(wants.tree) && stage > 0) {
-      out.tree = clamp(Math.min(out.tree, Math.floor(stage / 2)), PANES.tree.min, PANES.tree.max);
-    }
     return out;
   }
 
   /**
    * What to save when `name` is set to `px` with the panes shown at
    * `widths`: `{ name: px }`, plus every other open pane whose shown width
-   * is not what it would ask for once `name` is saved — one the window
-   * squeezed, or a default tree that halves a stage the change resizes —
-   * at its shown width. The layout on screen is then the one saved, so
+   * is not what it would ask for once `name` is saved (one the window
+   * squeezed) at its shown width. The layout on screen is then the one saved, so
    * nothing moves when it is fitted again; a pane that would be shown as
    * it is keeps its saved value (0 stays the default).
    */

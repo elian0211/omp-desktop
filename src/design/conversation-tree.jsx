@@ -1,8 +1,8 @@
 /* design/conversation-tree.jsx — the conversation-tree pane: the active tab's
    conversation as a git-style graph, one row per prompt, each with its
    prompt-cache state (src/app/conversation-tree.js builds the rows; the data
-   flow is app/use-conversation-tree.jsx). It replaces the ambient rail while
-   open (`.stage.with-tree`, layout/tree.css). Props mirror the hook's result;
+   flow is app/use-conversation-tree.jsx). It renders in the tool dock's
+   Tree pane (design/tool-dock.css). Props mirror the hook's result;
    `onBranch`/`onFork`/`onOpenFile` are its actions. */
 
 const {

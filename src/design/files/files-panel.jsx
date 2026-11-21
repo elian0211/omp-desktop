@@ -2,7 +2,7 @@
    files/files-panel.jsx — the files detail in the stage column
    (docs/architecture/file-comments.md): the selected file with its marks
    (FileCode), and a footer with the tab's mark counts, "clear all" and
-   "send now". The tree lives in the activity bar's Files view
+   "send now". The tree lives in the project side's Explorer fold
    (design/files/files-view.jsx), which opens this panel on a pick — the
    panel shows the picked file only, no second tree.
 

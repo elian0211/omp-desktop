@@ -54,6 +54,11 @@
   color: var(--fg-4); font-size: var(--d-text-sm);
 }
 
+/* Tree pane: the conversation tree fills the pane (the stage column and
+   its width are gone — phase 3). */
+.dock-tree { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.dock-tree .tree-drawer { flex: 1; min-height: 0; border-left: 0; background: var(--bg-window); }
+
 /* Vertical text tabs on the far right; visible whether or not a pane is
    open (re-click collapses the pane, the tabs stay). */
 .dock-tabs {
