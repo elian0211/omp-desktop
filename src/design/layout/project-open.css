@@ -1,0 +1,62 @@
+/* New-project / edit-project modal (the strip's + row and a project
+   button's right-click): shares .bridge-scrim's backdrop. */
+
+.pom-scrim { z-index: 60; }
+.pom-panel {
+  display: flex; flex-direction: column; gap: 10px;
+  width: min(440px, calc(100vw - 32px));
+  padding: 14px 16px;
+  background: var(--bg-elevated, var(--bg-surface));
+  border: 1px solid var(--line-bright);
+  border-radius: var(--r-2, 10px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.pom-head { font-size: var(--d-text-sm); color: var(--fg-2); }
+.pom-field { display: flex; flex-direction: column; gap: 4px; }
+.pom-label { font-size: var(--d-text-xs); color: var(--fg-3); }
+.pom-row { display: flex; gap: 6px; align-items: center; }
+.pom-input {
+  flex: 1; min-width: 0;
+  padding: 5px 8px;
+  font-size: var(--d-text-sm); color: var(--fg);
+  background: var(--bg-window);
+  border: 1px solid var(--line-bright); border-radius: var(--r-1);
+}
+.pom-input:focus { outline: 1px solid var(--accent); outline-offset: -1px; }
+.pom-input::placeholder { color: var(--fg-4); }
+.pom-path {
+  display: block; padding: 5px 0;
+  font-size: var(--d-text-xs); color: var(--fg-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pom-swatches {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.pom-sw, .pom-sw-default {
+  appearance: none; cursor: pointer; border-radius: 6px;
+  font-size: var(--d-text-xs); color: var(--fg-3);
+}
+.pom-sw {
+  width: 20px; height: 20px; padding: 0; border: 2px solid transparent; flex: none;
+}
+.pom-sw[aria-checked="true"] { border-color: var(--fg); }
+.pom-sw:focus-visible, .pom-sw-default:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pom-sw-default {
+  padding: 3px 8px; border: 1px solid var(--line-bright);
+  background: transparent;
+}
+.pom-sw-default[aria-checked="true"] { color: var(--fg); border-color: var(--fg); }
+.pom-hex {
+  width: 76px; padding: 3px 6px;
+  font-size: var(--d-text-xs); color: var(--fg);
+  background: var(--bg-window);
+  border: 1px solid var(--line-bright); border-radius: var(--r-1);
+}
+.pom-hex:focus { outline: 1px solid var(--accent); outline-offset: -1px; }
+.pom-hex::placeholder { color: var(--fg-4); }
+.pom-hint { font-size: var(--d-text-xs); color: var(--fg-4); }
+.pom-error { font-size: var(--d-text-xs); color: var(--rose); }
+.pom-foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  margin-top: 2px;
+}

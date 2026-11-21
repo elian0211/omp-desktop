@@ -4783,6 +4783,26 @@
       await _recentsCall("recent_projects_remove", { path, profile: _activeProfileId() });
     },
 
+    /** Archive an open tab's session file into omp's `gc --archive` layout
+     *  under its own profile (`{ok, value: archivePath}` / `{ok, error}`).
+     *  The tab must be closed first — the caller owns that ordering; Rust
+     *  re-checks the path against the profile's sessions root. */
+    async archiveSession(path, profile) {
+      return _invokeResult("session_archive", { path, profile: profile ?? null });
+    },
+
+    /** Delete an open tab's session file and its artifacts directory, under
+     *  the same rules as `archiveSession` (destructive, no undo). */
+    async deleteSession(path, profile) {
+      return _invokeResult("session_delete", { path, profile: profile ?? null });
+    },
+
+    /** Push a markdown note into the active tab's transcript — the UI
+     *  surface for backend operation failures (session archive/delete). */
+    note(text) {
+      _pushAssistantNote(text);
+    },
+
     /** Switch the active tab. Resets state and re-fetches from the session's omp. */
     async activateSession(id) {
       if (id === activeSessionId) return;
@@ -5080,6 +5100,13 @@
      *  null when cancelled or the pick is unusable (logged). */
     async pickFolder() {
       return _invokeSafe("open_project", undefined, null);
+    },
+
+    /** A hand-typed folder from the new-project modal, validated: resolves
+     *  to `{ok: true, value: canonical}` or `{ok: false, error}` — the
+     *  backend's raw reason, shown as the modal's inline message. */
+    async validateProjectFolder(path) {
+      return _invokeResult("project_folder_validate", { path });
     },
 
     /** List project-relative file/dir paths matching `query`, for the

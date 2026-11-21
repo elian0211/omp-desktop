@@ -143,4 +143,48 @@ check("isHex accepts #rgb and #rrggbb only", () => {
   assert.equal(A.isHex("#abcd"), false);
 });
 
+check("set stores a label beside an accent and trims it", () => {
+  assert.deepEqual(A.set({}, "/a", { label: "  Work  ", accent: "#112233" }),
+    { "/a": { label: "Work", accent: "#112233" } });
+});
+
+check("set keeps the label when only the accent is patched", () => {
+  const map = A.set({}, "/a", { label: "Work", accent: "#112233" });
+  assert.deepEqual(A.set(map, "/a", { accent: "#445566" }),
+    { "/a": { label: "Work", accent: "#445566" } });
+});
+
+check("set with a blank label clears it and keeps the accent", () => {
+  const map = A.set({}, "/a", { label: "Work", accent: "#112233" });
+  assert.deepEqual(A.set(map, "/a", { label: "" }), { "/a": { accent: "#112233" } });
+});
+
+check("set drops the entry once the label was its last field", () => {
+  const map = A.set({}, "/a", { label: "Work" });
+  assert.deepEqual(A.set(map, "/a", { label: "" }), {});
+});
+
+check("inkFor keeps the dark ink on the palette accents", () => {
+  for (const c of ["#8AF0C8", "#6EE7FF", "#FF7AC6", "#FFC56E", "#B59BFF", "#C4FF3F"]) {
+    assert.equal(A.inkFor(c), "#111", c);
+  }
+});
+
+check("inkFor flips to the light ink on a dark accent", () => {
+  assert.equal(A.inkFor("#1a1a2e"), "#fff");
+  assert.equal(A.inkFor("#0d1117"), "#fff");
+});
+
+check("inkFor picks the better-reading ink on a mid grey", () => {
+  // #808080: the dark ink's contrast (≈4.7) beats the light one's (≈4.0).
+  assert.equal(A.inkFor("#808080"), "#111");
+});
+
+check("inkFor expands #rgb and rejects unusable input", () => {
+  assert.equal(A.inkFor("#0af"), A.inkFor("#00aaff"));
+  assert.equal(A.inkFor(""), null);
+  assert.equal(A.inkFor("nope"), null);
+  assert.equal(A.inkFor(undefined), null);
+});
+
 console.log(`project-appearance: ${passed} checks passed`);

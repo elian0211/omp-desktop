@@ -17,8 +17,11 @@
   appearance: none; border: 2px solid transparent;
   width: 32px; height: 32px; padding: 0; border-radius: 8px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: color-mix(in oklab, var(--ps-accent, var(--fg-4)) 55%, var(--bg-surface));
-  color: var(--bg-window); cursor: pointer; flex: none;
+  /* A project's own accent (--ps-bg, the modal's pick) is used at full
+     strength with --ps-ink chosen against it; the default muted mix keeps
+     the window's own ink. */
+  background: var(--ps-bg, color-mix(in oklab, var(--ps-accent, var(--fg-4)) 55%, var(--bg-surface)));
+  color: var(--ps-ink, var(--bg-window)); cursor: pointer; flex: none;
 }
 .project-strip-btn:hover { filter: brightness(1.08); }
 .project-strip-btn.active { border-color: var(--fg); }
@@ -32,7 +35,7 @@
 .project-strip-btn.add:hover { color: var(--fg-2); border-color: var(--fg-4); }
 .project-strip-abbr {
   font-size: 11px; font-weight: 600; line-height: 1;
-  color: #111; letter-spacing: -0.02em;
+  color: inherit; letter-spacing: -0.02em;
 }
 .project-strip-btn .tab-run-dot {
   position: absolute; right: -2px; top: -2px;
@@ -56,6 +59,34 @@
   color: var(--fg-3); cursor: pointer; text-align: left;
 }
 .pside-fold-head:hover { background: var(--bg-hover); color: var(--fg-2); }
+.pside-fold-extra { margin-left: auto; display: inline-flex; }
+.pside-head-btn {
+  appearance: none; border: 0; background: transparent;
+  width: 20px; height: 20px; padding: 0; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-4); cursor: pointer; flex: none;
+}
+.pside-head-btn:hover { color: var(--fg-2); background: var(--bg-hover); }
+.pside-head-btn.on { color: var(--accent); }
+.pside-head-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* The delete confirmation swaps the row's content inline (ompweb's pattern). */
+.psb-confirm {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 8px; height: 28px;
+  font-size: var(--d-text-xs); color: var(--fg-2);
+}
+.psb-confirm-q { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.psb-confirm-btn {
+  appearance: none; border: 1px solid var(--line-bright); background: transparent;
+  padding: 2px 8px; border-radius: var(--r-1); flex: none;
+  font-size: var(--d-text-xs); color: var(--fg-2); cursor: pointer;
+}
+.psb-confirm-btn:hover { background: var(--bg-hover); color: var(--fg); }
+.psb-confirm-btn.danger { color: var(--rose); }
+.psb-confirm-btn.danger:hover { background: color-mix(in oklab, var(--rose) 12%, transparent); }
+/* Disabled session-menu items keep their reason in the title. */
+.pstrip-item:disabled { opacity: 0.45; cursor: default; }
+.pstrip-item:disabled:hover { background: transparent; color: inherit; }
 .pside-fold-title {
   font-size: var(--d-text-xs); font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.04em;

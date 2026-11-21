@@ -15,7 +15,7 @@
    ═════════════════════════════════════════════════════════════════════ */
 const { Icon: _FV_Icon, GitFileTree: _FV_Tree, FilesMenu: _FV_Menu } = window;
 
-function FilesView({ ui, onOpen, onReference, onReveal }) {
+function FilesView({ ui, onOpen, onReference, onReveal, showFilter = true }) {
   // A file row's right-click menu ({x, y, path, deleted}); opened from the
   // tree, closed by click-away, Escape, a scroll or a resize. Hooks stay
   // above the no-folder early return.
@@ -36,7 +36,6 @@ function FilesView({ ui, onOpen, onReference, onReveal }) {
   const activeTab = ui.view.changedOnly ? "changes" : repo ? "repo" : "project";
   return (
     <div className="files-view">
-      <div className="psb-head">{OMP_TR("Explorer")}</div>
       <_FV_Tree
         headless
         root={tree} error={ui.treeError} truncated={repo ? false : ui.truncated}
@@ -48,6 +47,7 @@ function FilesView({ ui, onOpen, onReference, onReveal }) {
         changedCount={changedCount}
         badges={repo ? null : ui.counts.byPath}
         searched={ui.searchMode}
+        filterOpen={showFilter}
         emptyText={ui.searchMode && !ui.view.filter.trim()
           ? OMP_TR("Not a git repository: type to search the folder.") : undefined}
         onFileContext={(node, e) => setMenu({

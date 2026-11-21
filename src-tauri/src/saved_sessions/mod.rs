@@ -12,9 +12,10 @@
 //! "the same session". Wiring session-switch/resume logic against it will
 //! silently misbehave across reloads.
 //!
-//! Submodules:
-//! - [`tests`] — unit tests for the pure parse/scan/validate helpers below.
-
+/// Submodules:
+/// - [`ops`] — archive/delete of session files for the sessions fold's
+///   right-click menu (ompweb's file-level semantics; the RPC has none).
+/// - [`tests`] — unit tests for the pure parse/scan/validate helpers below.
 use std::ffi::OsStr;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader};
@@ -450,6 +451,8 @@ pub fn validate_resume(app: &AppHandle, resume: &str, profile: Option<&str>) -> 
         .ok_or_else(|| "could not resolve home directory".to_string())?;
     validate_resume_against_root(&root, resume)
 }
+
+pub mod ops;
 
 #[cfg(test)]
 mod tests;

@@ -146,6 +146,12 @@
        page. -->
   <script src="app/project-appearance.js"></script>
 
+  <!-- New-project modal state (the strip's + row): pure draft transitions and
+       the commit's appearance patch. Depends on project-nav's basename and
+       project-appearance's isHex (both above); design/project-open-modal.jsx
+       and app-live.jsx read window.OMP_PROJECT_OPEN. -->
+  <script src="app/project-open.js"></script>
+
   <!-- File preview (issue #39): which file and lines a read card or a chat
        link points at, project confinement, highlighted lines. IIFE that
        destructures window.OMP_MARKDOWN (app/marked-setup.js) and
@@ -520,6 +526,11 @@
        project-side needs FilesView, SidePanelStub, TabRunDot, RenameField. -->
   <script type="text/babel" src="design/project-strip.jsx"></script>
   <script type="text/babel" src="design/project-side.jsx"></script>
+  <!-- The new-project / edit-project modal: destructures OMP_SETTINGS.ACCENTS
+       (app/settings-schema.js, above) at load and calls window.useModalFocus
+       (design/ui/, above) at render; app-live.jsx destructures
+       window.ProjectOpenModal. -->
+  <script type="text/babel" src="design/project-open-modal.jsx"></script>
   <!-- Tool dock (phase 2): tabs + pane host; needs ResizeHandle (ui/) and
        OMP_TOOL_DOCK semantics only — the pane body comes from app-live. -->
   <script type="text/babel" src="design/tool-dock.jsx"></script>

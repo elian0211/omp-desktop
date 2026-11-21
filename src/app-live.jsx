@@ -21,7 +21,7 @@ const {
   Icon, ChatView, PlanPill, Composer, CommandBridge, WindowChrome, Toolbar, TabBar, SubagentPane,
   ProjectStrip, ProjectSide, EmptyWorkspace, ToolDock,
   StatusBar, ConversationTree, HistoryModal, GitBrowser, FilePreview, FilePreviewTitle, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, useTweaks,
-  SettingsPage, ConfirmCloseDialog,
+  SettingsPage, ConfirmCloseDialog, ProjectOpenModal,
   useWidgets, WidgetCard, WidgetErrorCard, WidgetApprovalCard, WidgetBoundary,
   TWEAK_DEFAULTS, NULL_MODEL, EMPTY_PROJECT, DEFAULT_PROFILE_ID,
   INTENT_FRAMING, APPROVAL_PROMPT,
@@ -34,6 +34,10 @@ const { routeSubmit: _routeSubmit } = window.OMP_SLASH;
 const { mergeIntoMessage: _mergeBrowserChips, browserCommand: _browserCommand, MIN_WIDTH: _AL_BROWSER_MIN } = window.OMP_BROWSER;
 const { mergeIntoMessage: _mergeFileMarks } = window.OMP_FILE_COMMENTS;
 const { groupTabs, groupKey, moveGroup, moveMember, shiftGroup, recentRows } = window.OMP_PROJECT_NAV;
+const {
+  emptyDraft: _poEmptyDraft, draftForFolder: _poFolderDraft, draftForEdit: _poEditDraft,
+  finalize: _poFinalize, appearancePatch: _poAppearancePatch,
+} = window.OMP_PROJECT_OPEN;
 const { toggle: _svToggle } = window.OMP_SESSION_VIEW;
 const {
   entryOf, updateEntry, pruneEntries, seedEntries,
@@ -79,6 +83,9 @@ function App() {
   const [stab, setStab] = React.useState(window.OMP_SETTINGS_TAB.initial);
   // live.js's pending "close a working tab / quit?" question, or null.
   const [closeConfirm, setCloseConfirm] = React.useState(null);
+  // The new-project / edit-project modal (app/project-open.js): null closed,
+  // else `{ mode: "open" | "edit", draft, error?, busy? }`.
+  const [projectModal, setProjectModal] = React.useState(null);
   // Composer plan pill expanded upward (ompweb TodoList), not the kanban modal.
   const [planOpen,    setPlanOpen]    = React.useState(false);
   // The column beside the chat, per tab (`side` below): the ambient rail,
@@ -794,8 +801,9 @@ function App() {
     try {
       await bridge.resumeSession(session);
     } catch (err) {
-      // Same dangling-profile rejection as openSession (see handleNewProject
-      // below) — the bridge already rolled back its ghost tab registration.
+      // Same dangling-profile rejection as openSession (see handleModalCommit's
+      // openProject call below) — the bridge already rolled back its ghost tab
+      // registration.
       console.error("[app] failed to resume session:", err);
     }
   };
@@ -816,23 +824,81 @@ function App() {
     // setActiveSessionId is driven by snap.activeSessionId from onUpdate
   };
 
-  // Open project → new session → new tab with its own omp process
-  const handleNewProject = async () => {
-    if (!bridge) return;
+  // ── New-project modal (the strip's + row, the toolbar's open button,
+  //    `desktop.tab.new`); a strip button's right-click opens its edit mode.
+  //    Draft transitions are app/project-open.js's. Commit validates the
+  //    folder against the backend, writes the `projectAppearance` patch and
+  //    then focuses or spawns the project (`openProject`: an existing tab
+  //    wins, like a recents row).
+  const openProjectModal = () => setProjectModal({ mode: "open", draft: _poEmptyDraft() });
+  const handleModalBrowse = async () => {
     const path = await bridge.pickFolder();
-    if (!path) return;
+    if (!path) return; // cancelled — keep the draft as typed
+    setProjectModal(m => m && { ...m, draft: _poFolderDraft(m.draft, path), error: undefined });
+  };
+  const handleModalChange = draft => setProjectModal(m => m && { ...m, draft, error: undefined });
+  const handleModalCommit = async draft => {
+    const modal = projectModal;
+    if (!modal) return;
+    const pre = _poFinalize(draft);
+    if (pre.error) { setProjectModal({ ...modal, error: pre.error }); return; }
+    setProjectModal({ ...modal, busy: true, error: undefined });
+    const res = await bridge.validateProjectFolder(pre.path);
+    if (!res.ok) {
+      // The backend's raw reason (not a folder, unreadable…) — never OMP_TR'd.
+      setProjectModal(m => m && { ...m, busy: false, error: res.error });
+      return;
+    }
+    // The canonical path is the one recents and open tabs key on, so the
+    // patch and the spawned tab both use it.
+    const fields = _poFinalize(draft, res.value);
+    const patch = _poAppearancePatch(fields, modal.mode === "edit");
+    if (Object.keys(patch).length) {
+      setTweak("projectAppearance",
+        window.OMP_PROJECT_APPEARANCE.set(t.projectAppearance, fields.path, patch));
+    }
+    setProjectModal(null);
+    if (modal.mode === "edit") return;
+    setProjectSide(true);
     try {
-      await bridge.openSession(path);
-      // Tab list and activeSessionId are updated via onUpdate from the bridge
+      await bridge.openProject(fields.path);
     } catch (err) {
-      // openSession rejects when the inherited/ticked profile no longer
+      // openProject rejects when the inherited/ticked profile no longer
       // exists (deleted by another window, or a hand-edited profiles.json)
       // and the backend refuses to spawn under it — the bridge already
-      // rolled back the ghost tab registration, so there's nothing left to
-      // undo here; just keep the rejection from going unhandled.
+      // rolled back the ghost tab registration and shows its note, so
+      // there's nothing left to undo; keep the rejection from going
+      // unhandled (same path as handleOpenRecent above).
       console.error("[app] failed to open project:", err);
     }
   };
+  // Edit mode prefills the stored label/accent; the folder is the identity
+  // and stays read-only. Reset drops the whole override (the Settings row's
+  // reset semantics), restoring the folder's own name and the muted look.
+  const handleEditProject = path => {
+    const override = window.OMP_PROJECT_APPEARANCE.forProject(t.projectAppearance, path);
+    setProjectModal({ mode: "edit", draft: _poEditDraft(path, override) });
+  };
+  const handleResetProject = path => {
+    setTweak("projectAppearance", window.OMP_PROJECT_APPEARANCE.clear(t.projectAppearance, path));
+  };
+
+  // Archive / delete a conversation from the Sessions fold's right-click
+  // menu (disabled there unless the tab has a persisted session file and an
+  // idle agent): the tab closes first — its omp process must no longer hold
+  // the file — then the file operation runs under the tab's own profile. A
+  // failure after the close surfaces as a note in the now-active tab.
+  const closeThenOperate = async (tab, op, failed) => {
+    if (!bridge || !tab?.sessionFile) return;
+    const closed = await bridge.closeSession(tab.id);
+    if (!closed) return; // refused (voice stop failed) or gone already
+    const res = op === "archive"
+      ? await bridge.archiveSession(tab.sessionFile, tab.profile)
+      : await bridge.deleteSession(tab.sessionFile, tab.profile);
+    if (!res.ok) bridge.note(`**${failed}:** ${res.error}`);
+  };
+  const handleArchiveSession = tab => closeThenOperate(tab, "archive", OMP_TR("Archive failed"));
+  const handleDeleteSession = tab => closeThenOperate(tab, "delete", OMP_TR("Delete failed"));
 
   // Close tab → kills that session's omp process; bridge updates tab list.
   // Guarded: with `confirmBusyClose` a working tab asks first (live.js).
@@ -844,10 +910,6 @@ function App() {
   // ── Project strip + project side ──────────────────────────────────────────
   const sidePanelOpen = projectSideOpen;
   const toggleSidePanel = () => setProjectSide(!projectSideOpen);
-  const openWorkspaceBrowse = () => {
-    setProjectSide(true);
-    handleNewProject();
-  };
   const projectGroups = React.useMemo(() => groupTabs(sessions), [sessions]);
   const activeGroup = React.useMemo(() => {
     if (!activeSessionId) return null;
@@ -915,7 +977,7 @@ function App() {
     try {
       await bridge.openProject(path);
     } catch (err) {
-      // Same rejection/rollback as openSession (see handleNewProject).
+      // Same rejection/rollback as openSession (see handleModalCommit).
       console.error("[app] failed to open recent project:", err);
     }
   };
@@ -962,9 +1024,9 @@ function App() {
   // ── Global keymap handler map ─────────────────────────────────────────────
   // Written into handlersRef every render so the dispatch hook always reads
   // the latest closures without re-subscribing to the window listener.
-  // Placed after handleNewProject/handleCloseTab so every entry can be a
+  // Placed after handleModalCommit/handleCloseTab so every entry can be a
   // direct function reference (matching cycleThinking/togglePlanMode above)
-  // instead of a `() => handleNewProject()` wrapper that only exists to
+  // instead of a `() => openProjectModal()` wrapper that only exists to
   // dodge a TDZ that a closure never actually hits.
   handlersRef.current = {
     "app.interrupt":           () => {
@@ -997,7 +1059,7 @@ function App() {
     "desktop.dock.session":    () => dockSelect("session"),
     "desktop.dock.tree":       () => dockSelect("tree"),
     "desktop.dock.usage":      () => dockSelect("usage"),
-    "desktop.tab.new":         openWorkspaceBrowse,
+    "desktop.tab.new":         openProjectModal,
     // The settings tab, when it is the one shown, closes itself; it is the
     // last stop of next/prev (OMP_SETTINGS_TAB.cycle).
     "desktop.tab.close":       () => {
@@ -1147,7 +1209,7 @@ function App() {
           <Toolbar
             nav={{
               sidebarOpen: sidePanelOpen, onToggleSidebar: toggleSidePanel,
-              onOpenProject: openWorkspaceBrowse, onHistory: () => setHistoryOpen(true),
+              onOpenProject: openProjectModal, onHistory: () => setHistoryOpen(true),
             }}
             subagents={{ open: showSplit, onToggle: subagentUi.togglePane }}
             browser={{
@@ -1176,7 +1238,9 @@ function App() {
               onSelectTab={handleSelectTab}
               onOpenRecent={handleOpenRecent}
               onForgetRecent={handleForgetRecent}
-              onOpenFolder={openWorkspaceBrowse}
+              onOpenFolder={openProjectModal}
+              onEditProject={handleEditProject}
+              onResetProject={handleResetProject}
             />
             <ProjectSide
               open={sidePanelOpen}
@@ -1190,6 +1254,8 @@ function App() {
               onRenameTab={handleRenameTab}
               onNewInProject={handleNewInProject}
               onReorder={handleReorder}
+              onArchiveSession={handleArchiveSession}
+              onDeleteSession={handleDeleteSession}
               files={files}
               onOpenFile={path => handlePreviewFile({ path })}
               onReference={path => setPromptInsert({ text: "@" + path, append: true, sessionId: planKey, nonce: Date.now() })}
@@ -1214,7 +1280,7 @@ function App() {
                     notes={workspaceNotes}
                     screen={t.startScreen}
                     paused={stab.active}
-                    onOpenWorkspace={openWorkspaceBrowse}
+                    onOpenWorkspace={openProjectModal}
                   />
                 ) : (<>
                   <ChatView key={activeSessionId} messages={messages}
@@ -1473,6 +1539,14 @@ function App() {
 
       {closeConfirm && (
         <ConfirmCloseDialog confirm={closeConfirm} onAnswer={handleCloseAnswer} />
+      )}
+
+      {projectModal && (
+        <ProjectOpenModal mode={projectModal.mode} draft={projectModal.draft}
+          error={projectModal.error} busy={projectModal.busy}
+          profileLabel={profileLabel(activeProfileId)}
+          onChange={handleModalChange} onBrowse={handleModalBrowse}
+          onCommit={handleModalCommit} onCancel={() => setProjectModal(null)} />
       )}
     </_AL_MdLinkCtx.Provider>
   );

@@ -29,7 +29,7 @@ function _SRAPP_Project({ row, ctx, query }) {
   return (
     <Row stack label={row.label} desc={row.desc} query={query} modified={!!override} onReset={clear}>
       <div className="st-projapp">
-        <span className="st-projapp-name" title={path}>{basename(path)}</span>
+        <span className="st-projapp-name" title={path}>{override?.label || basename(path)}</span>
         <Seg label={row.label} value={override?.theme ?? ""} options={themeOptions}
           onChange={v => {
             const patch = window.OMP_PROJECT_APPEARANCE.themePatch(v, v ? themeAccent(v) : undefined, override?.theme);

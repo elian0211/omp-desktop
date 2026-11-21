@@ -1,5 +1,7 @@
-// Per-project appearance: a folder can override the global theme and accent
-// (Settings → Appearance → Project colours). Keys are the tab's recorded
+// Per-project appearance: a folder can override the global theme and accent,
+// and carry a display-only name label (the new-project modal's edit mode;
+// the strip, the recents rows and the Settings row prefer it, tooltips keep
+// the real path). Keys are the tab's recorded
 // project folder normalised the same way the sidebar groups tabs
 // (`OMP_PROJECT_NAV.normPath`); paths that reach the frontend from the OS are
 // already canonicalised in Rust, so a symlinked folder shares its target's
@@ -37,6 +39,12 @@
       } else if (name === "accent") {
         if (value === undefined) out.accent = undefined;
         else if (isHex(value)) out.accent = String(value).trim().toLowerCase();
+      } else if (name === "label") {
+        // Present-but-blank clears (the edit modal's submit sends both
+        // fields, so erasing the name falls back to the folder basename);
+        // an absent field never reaches this branch and keeps the old label.
+        if (typeof value === "string" && value.trim()) out.label = value.trim();
+        else out.label = undefined;
       }
     }
     return out;
@@ -50,7 +58,7 @@
     const values = patchValues(patch);
     const current = (map || {})[k] || {};
     const merged = { ...current, ...values };
-    for (const name of ["theme", "accent"]) if (merged[name] === undefined) delete merged[name];
+    for (const name of ["theme", "accent", "label"]) if (merged[name] === undefined) delete merged[name];
     const next = { ...(map || {}) };
     if (Object.keys(merged).length) next[k] = merged;
     else delete next[k];
@@ -90,5 +98,30 @@
     };
   }
 
-  window.OMP_PROJECT_APPEARANCE = { key, forProject, set, clear, themePatch, resolve, isHex };
+  /** WCAG relative luminance of `#rgb`/`#rrggbb`, `null` otherwise. */
+  function luminance(hex) {
+    if (!isHex(hex)) return null;
+    let h = hex.trim().toLowerCase();
+    if (h.length === 4) h = "#" + [...h.slice(1)].map(c => c + c).join("");
+    const lin = c => {
+      const v = parseInt(c, 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * lin(h.slice(1, 3)) + 0.7152 * lin(h.slice(3, 5)) + 0.0722 * lin(h.slice(5, 7));
+  }
+
+  const L_INK_DARK = luminance("#111");
+  const contrast = (a, b) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+  /** The strip ink for an accent background: whichever of the fixed dark
+   *  and light inks contrasts better — a palette accent keeps the dark ink
+   *  it always had, a custom dark colour flips to the light one. `null`
+   *  with no usable accent: the default muted look keeps its own colours. */
+  function inkFor(accent) {
+    const l = luminance(accent);
+    if (l === null) return null;
+    return contrast(l, L_INK_DARK) >= contrast(1, l) ? "#111" : "#fff";
+  }
+
+  window.OMP_PROJECT_APPEARANCE = { key, forProject, set, clear, themePatch, resolve, inkFor, isHex };
 })();

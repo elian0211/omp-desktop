@@ -30,7 +30,7 @@ const GIT_STATUS_META = {
 
 function GitFileTree({
   root, error, expanded, onToggle, selected, onSelect, changedOnly, onChangedOnly,
-  filter, onFilter, changedCount, commit, truncated, badges, commented, searched = false, emptyText, onFileContext, allFiles, headless = false,
+  filter, onFilter, changedCount, commit, truncated, badges, commented, searched = false, emptyText, onFileContext, allFiles, headless = false, filterOpen = true,
 }) {
   const rows = React.useMemo(() => {
     if (searched) return (root?.children ?? []).map(node => ({ node, depth: 0, flat: true }));
@@ -81,12 +81,16 @@ function GitFileTree({
         )}
       </div>
       )}
-      <div className="gitb-filter">
-        <_GT_Icon name="search" size={11} color="var(--fg-4)" />
-        <input className="gitb-filter-input mono" value={filter} onChange={e => onFilter(e.target.value)}
-          placeholder={OMP_TR("filter files")} spellCheck={false} />
-        {filter && <button type="button" className="btn ghost icon" onClick={() => onFilter("")} aria-label={OMP_TR("clear filter")}><_GT_Icon name="close" size={10} /></button>}
-      </div>
+      {/* Hidden until asked for: the Explorer fold's header toggle opens it
+          (`filterOpen`); the git browser keeps it always on. */}
+      {filterOpen && (
+        <div className="gitb-filter">
+          <_GT_Icon name="search" size={11} color="var(--fg-4)" />
+          <input className="gitb-filter-input mono" value={filter} onChange={e => onFilter(e.target.value)}
+            placeholder={OMP_TR("filter files")} spellCheck={false} />
+          {filter && <button type="button" className="btn ghost icon" onClick={() => onFilter("")} aria-label={OMP_TR("clear filter")}><_GT_Icon name="close" size={10} /></button>}
+        </div>
+      )}
       <div className="gitb-tree" role="tree">
         {empty && <div className={`gitb-empty ${error ? "gitb-error" : ""}`}>{empty}</div>}
         {!error && rows.map(({ node, depth, flat }) => {

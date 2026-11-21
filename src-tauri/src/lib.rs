@@ -816,6 +816,44 @@ async fn open_project(app: tauri::AppHandle) -> Result<Option<String>, String> {
     .await?
 }
 
+/// A hand-typed folder path from the new-project modal, as a canonical
+/// directory, or the reason it is not (shown as the modal's inline error).
+///
+/// Canonical, exactly like `open_project`'s pick: the tab path is compared
+/// with recent-projects entries and open tabs (`openProject`'s focus-existing
+/// lookup), so a folder typed through a symlink must not look like a
+/// different project. The webview may send any string — `canonical_folder`
+/// is the check, and the error is display text, never a panic.
+#[tauri::command]
+async fn project_folder_validate(path: String) -> Result<String, String> {
+    off_ipc(move || external_open::canonical_folder(Path::new(&path))).await?
+}
+
+/// Archive an open tab's session file into omp's `gc --archive` layout
+/// (`<agent>/archive/sessions/<relative>.jsonl.gz`, artifacts moved along).
+/// The frontend closes the tab first, so no omp process holds the file; the
+/// path is re-checked against `profile`'s sessions root here (see
+/// `saved_sessions::ops`). The error string is display text.
+#[tauri::command]
+async fn session_archive(
+    app: tauri::AppHandle,
+    profile: Option<String>,
+    path: String,
+) -> Result<String, String> {
+    off_ipc(move || saved_sessions::ops::archive_session(&app, profile.as_deref(), &path)).await?
+}
+
+/// Delete an open tab's session file and its artifacts directory, after the
+/// frontend closed the tab — same confinement as [`session_archive`].
+#[tauri::command]
+async fn session_delete(
+    app: tauri::AppHandle,
+    profile: Option<String>,
+    path: String,
+) -> Result<(), String> {
+    off_ipc(move || saved_sessions::ops::delete_session(&app, profile.as_deref(), &path)).await?
+}
+
 /// What `start_git_watch` reports for a tab's folder.
 #[derive(serde::Serialize)]
 struct GitWatch {
@@ -1811,6 +1849,9 @@ pub fn run() {
             extension_ui_state,
             streaming_message,
             open_project,
+            project_folder_validate,
+            session_archive,
+            session_delete,
             take_pending_open_projects,
             start_git_watch,
             stop_git_watch,
