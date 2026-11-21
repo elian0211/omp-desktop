@@ -339,6 +339,10 @@ window.OMP_I18N.add("zh", {
 
   // ── Window chrome, activity bar, workspaces, tabs ──
   "projects": "项目",
+  "Projects": "项目",
+  "Project side": "项目侧栏",
+  "Sessions": "会话",
+  "Open a workspace to see its sessions.": "打开一个工作区以查看其会话。",
   "Workspaces": "工作区",
   "Activity bar": "活动栏",
   "Side panel": "侧栏",

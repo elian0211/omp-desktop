@@ -31,6 +31,18 @@
     return parts.length ? parts[parts.length - 1] : p;
   }
 
+  /** Short label for the project strip: up to `max` letters from the folder
+   *  basename (or tab name), alphanumerics preferred, else the raw start.
+   *  Empty input → "?". */
+  function projectAbbr(name, max) {
+    const n = Math.max(1, Math.min(4, max | 0 || 2));
+    const s = String(name || "").trim();
+    if (!s) return "?";
+    const letters = s.replace(/[^A-Za-z0-9\u4e00-\u9fff]/g, "");
+    const src = letters || s;
+    return src.slice(0, n);
+  }
+
   /** Name of the folder containing `p` ("devel" for ~/devel/x), or "" when
    *  `p` has no parent segment (a root-level folder, a bare drive). */
   function parentName(p) {
@@ -247,6 +259,7 @@
     normPath,
     basename,
     parentName,
+    projectAbbr,
     groupKey,
     groupTabs,
     groupRunState,

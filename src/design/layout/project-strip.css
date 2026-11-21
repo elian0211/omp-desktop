@@ -1,0 +1,142 @@
+/* Project strip + project side (2026-11-21 project-dock-layout) ───── */
+
+.project-strip {
+  width: var(--w-project-strip, 48px); flex: none; min-height: 0;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 0; gap: 6px;
+  border-right: 1px solid var(--line);
+  background: var(--bg-window);
+  z-index: 2;
+}
+.project-strip-list {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  flex: 1; min-height: 0; overflow-y: auto; width: 100%;
+}
+.project-strip-btn {
+  position: relative;
+  appearance: none; border: 2px solid transparent;
+  width: 32px; height: 32px; padding: 0; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in oklab, var(--ps-accent, var(--fg-4)) 55%, var(--bg-surface));
+  color: var(--bg-window); cursor: pointer; flex: none;
+}
+.project-strip-btn:hover { filter: brightness(1.08); }
+.project-strip-btn.active { border-color: var(--fg); }
+.project-strip-btn:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+.project-strip-btn.add {
+  background: transparent; border: 1px dashed var(--line);
+  color: var(--fg-4); margin-top: auto;
+}
+.project-strip-btn.add:hover { color: var(--fg-2); border-color: var(--fg-4); }
+.project-strip-abbr {
+  font-size: 11px; font-weight: 600; line-height: 1;
+  color: #111; letter-spacing: -0.02em;
+}
+.project-strip-btn .tab-run-dot {
+  position: absolute; right: -2px; top: -2px;
+  width: 8px; height: 8px; border: 1px solid var(--bg-window);
+}
+
+/* Project side: Sessions + Explorer folds inside .side-panel width. */
+.project-side {
+  display: flex; flex-direction: column; min-height: 0;
+}
+.pside-fold {
+  display: flex; flex-direction: column; min-height: 0; flex: none;
+  border-bottom: 1px solid var(--line-soft);
+}
+.pside-fold.grow { flex: 1; min-height: 120px; }
+.pside-fold.closed { flex: none; }
+.pside-fold-head {
+  appearance: none; border: 0; background: transparent;
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; height: 28px; padding: 0 10px; flex: none;
+  color: var(--fg-3); cursor: pointer; text-align: left;
+}
+.pside-fold-head:hover { background: var(--bg-hover); color: var(--fg-2); }
+.pside-fold-title {
+  font-size: var(--d-text-xs); font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.pside-chev {
+  display: inline-flex; transition: transform 0.12s ease; color: var(--fg-4);
+}
+.pside-chev.open { transform: rotate(90deg); }
+.pside-fold-body {
+  display: flex; flex-direction: column; min-height: 0; flex: 1;
+  overflow: hidden;
+}
+.pside-fold.grow > .pside-fold-body { overflow: auto; }
+.pside-sessions { padding: 4px 6px 8px; }
+.pside-sessions .psb-row.psb-tab { padding-left: 6px; }
+.pside-new {
+  appearance: none; border: 0; background: transparent;
+  display: inline-flex; align-items: center; gap: 6px;
+  width: 100%; padding: 6px 8px; margin-top: 2px;
+  color: var(--fg-4); font-size: var(--d-text-xs); cursor: pointer;
+  border-radius: var(--r-1);
+}
+.pside-new:hover { background: var(--bg-hover); color: var(--fg-2); }
+.pside-empty {
+  padding: 12px 10px; font-size: var(--d-text-xs); color: var(--fg-4); line-height: 1.4;
+}
+
+/* Thin session tabs inside .main-column (under toolbar). */
+.main-column {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+}
+.session-tabs {
+  display: flex; align-items: stretch; gap: 2px;
+  height: 28px; padding: 0 6px; flex: none;
+  background: var(--bg-window);
+  border-bottom: 1px solid var(--line);
+  overflow-x: auto; min-width: 0;
+}
+.session-tabs .tab {
+  height: 26px; padding: 0 8px; gap: 5px;
+  font-size: var(--d-text-xs);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+  min-width: 0; border-right: 0;
+}
+.session-tabs .tab.active {
+  border-bottom-color: var(--accent);
+  background: color-mix(in oklab, var(--bg-surface) 80%, transparent);
+}
+.session-tabs .tab-bar-mark { display: none; }
+.session-tabs .tab-name { max-width: 140px; }
+.session-tabs .tab-close { opacity: 0.55; }
+.session-tabs .tab:hover .tab-close { opacity: 1; }
+
+/* The + menu (recents + open folder), portaled to <body> and placed right
+   of the strip button — `left`/`bottom`/`max-height` set inline. */
+.pstrip-pop { position: fixed; width: 240px; max-width: calc(100vw - 16px); }
+.pstrip-pop.busy { cursor: progress; }
+.pstrip-pop-head {
+  padding: 5px 8px 4px;
+  font-size: var(--d-text-xs); color: var(--fg-4);
+  text-transform: lowercase; letter-spacing: 0.04em;
+}
+.pstrip-pop-list {
+  display: flex; flex-direction: column; gap: 1px;
+  min-height: 0; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--line-bright) transparent;
+}
+.pstrip-pop-note { padding: 5px 8px; font-size: var(--d-text-xs); color: var(--fg-3); }
+.pstrip-row { display: flex; align-items: center; gap: 2px; }
+.pstrip-row .pstrip-item { flex: 1; min-width: 0; }
+.pstrip-item-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pstrip-item-parent { color: var(--fg-5); margin-left: 6px; }
+.pstrip-item-x {
+  appearance: none; border: 0; background: transparent;
+  width: 1.125rem; height: 1.125rem; padding: 0; border-radius: 4px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-4); cursor: pointer;
+}
+.pstrip-item-x:hover { color: var(--fg); background: var(--bg-hover); }
+.pstrip-item-x:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.pstrip-open { border-top: 1px solid var(--line-soft); border-radius: 0 0 var(--r-1) var(--r-1); margin-top: 2px; }

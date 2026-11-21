@@ -35,9 +35,9 @@
 }
 .pane-resize.at-split { grid-row: 1; grid-column: 2; }
 .pane-resize.at-side { grid-row: 1; grid-column: -2; }
-/* Side panel sits after the fixed activity bar (`--w-activity`). */
+/* Project side sits after the fixed project strip (`--w-project-strip`). */
 .pane-resize.at-sidebar {
-  left: calc(var(--w-activity, 48px) + var(--w-sidebar, 220px) - 3px);
+  left: calc(var(--w-project-strip, 48px) + var(--w-sidebar, 220px) - 3px);
 }
 .pane-resize-tip {
   display: none; position: absolute; top: 50%; transform: translateY(-50%);

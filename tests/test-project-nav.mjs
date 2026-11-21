@@ -65,6 +65,14 @@ check("parentName is the containing folder, empty without one", () => {
   assert.equal(N.parentName(""), "");
 });
 
+// ── projectAbbr ───────────────────────────────────────────────────────────
+
+check("projectAbbr takes letters/digits from the basename", () => {
+  assert.equal(N.projectAbbr("omp-desktop", 2), "om");
+  assert.equal(N.projectAbbr("my_app", 3), "mya");
+  assert.equal(N.projectAbbr("", 2), "?");
+});
+
 // ── groupTabs ─────────────────────────────────────────────────────────────
 
 check("the same folder under two profiles is two groups", () => {

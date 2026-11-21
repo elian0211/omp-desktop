@@ -1,8 +1,8 @@
 # Workspace layout redesign
 
-**Status:** phases 1–3 done (activity bar; Workspaces + Files + Session side views; right column widget-only and hidden when empty); phase 4 (Settings / keymap) next · **revised** 2026-11-20 (activity bar)  
+**Status:** **SUPERSEDED** by [`../2026-11-21-project-dock-layout/`](../2026-11-21-project-dock-layout/) (2026-11-21). Phases 1–3 of *this* plan shipped (activity bar; Workspaces / Files / Session side views; widget-only right column); the product direction then moved to a **project strip + dual-fold project side + right tool dock**, which invalidates the activity-bar three-view model as the end state. Keep this folder for history; do not implement phase 4 of *this* plan — follow the new plan instead.  
 **Date:** 2026-11-20  
-**Goal:** VS Code–style **activity bar** (icon strip) + **switchable side panel**; a **Workspaces** view shows folders **and** their sessions with run state; other views (files, session tools, …) are per active tab; right column stays **widgets-only (often absent)**.
+**Goal (historical):** VS Code–style **activity bar** (icon strip) + **switchable side panel**; a **Workspaces** view shows folders **and** their sessions with run state; other views (files, session tools, …) are per active tab; right column stays **widgets-only (often absent)**.
 
 ## Why the revision
 

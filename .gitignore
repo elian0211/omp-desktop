@@ -46,3 +46,7 @@ docs/superpowers/
 
 # ── Nucleus MCP index (local tool state) ─────────────────────────────────────
 .nucleus/
+
+# Layout-sketch explorers and a stray pnpm lock from tool runs (npm is the package manager)
+.temp/
+pnpm-lock.yaml

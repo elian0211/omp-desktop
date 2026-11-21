@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Layout shell for the **project-dock** redesign (phase 1): under the full-width title bar and toolbar, a **project strip** switches open folders (abbreviation + project accent, run badge); the **project side** panel has two folds — **Sessions** (this project only; click opens/focuses a tab) and **Explorer** (the file tree). Session tabs move under the toolbar as a thin strip for the active project only (no more project group chips as the primary switcher). The activity-bar Workspaces / Files / Session navigator is no longer mounted. Session tools return in the right tool dock (phase 2).
+
 ### Fixed
 
 - A project with only one conversation now uses the same tab-bar chip as a multi-tab project (folder name, count, ▾ dropdown), so the "new conversation" entry is always there instead of a plain `folder · title` tab with no menu.

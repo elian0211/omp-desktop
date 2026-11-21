@@ -474,9 +474,8 @@
   <!-- App toolbar between the title bar and the tabs; app-live.jsx
        destructures window.Toolbar. -->
   <script type="text/babel" src="design/toolbar.jsx"></script>
-  <!-- Activity bar + Workspaces side view (replaces project sidebar);
-       activity-bar needs Icon + OMP_ACTIVITY; workspaces-view needs
-       TabRunDot / TabLabel (tab-group-chip.jsx) and OMP_PROJECT_NAV. -->
+  <!-- Activity bar + Workspaces kept for phase-2 harvest; project strip /
+       project side load after FilesView (see below). -->
   <script type="text/babel" src="design/activity-bar.jsx"></script>
   <script type="text/babel" src="design/workspaces-view.jsx"></script>
   <!-- Start screens: art.js (plain IIFE, window.OMP_BACKDROP_ART: the
@@ -522,6 +521,10 @@
   <!-- Files activity view (side panel tree): destructures GitFileTree and
        Icon at top level, both loaded above. -->
   <script type="text/babel" src="design/files/files-view.jsx"></script>
+  <!-- Project strip + dual-fold project side (project-dock-layout phase 1).
+       project-side needs FilesView, SidePanelStub, TabRunDot, RenameField. -->
+  <script type="text/babel" src="design/project-strip.jsx"></script>
+  <script type="text/babel" src="design/project-side.jsx"></script>
   <!-- Session activity view (side panel accordion): destructures the rail
        cards (chrome.jsx), SubagentRailCard, PrAutomationCard, the widget
        cards and OMP_SESSION_VIEW at top level — all loaded above. -->

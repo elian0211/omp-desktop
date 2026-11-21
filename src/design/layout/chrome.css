@@ -52,7 +52,7 @@
    menus (thinking-menu.jsx, positioned in composer.css; branch-menu.jsx in
    rail.css) and the browser panel's annotate popover (positioned in
    browser.css). */
-.profile-pop, .tab-group-pop, .thinking-pop, .branch-pop, .browser-popover {
+.profile-pop, .tab-group-pop, .thinking-pop, .branch-pop, .browser-popover, .pstrip-pop {
   position: absolute; z-index: 40;
   padding: 4px;
   display: flex; flex-direction: column; gap: 1px;
@@ -94,18 +94,18 @@
    the risk gradient has to point the same way.) */
 .profile-row { display: flex; align-items: center; gap: 6px; }
 .profile-row .profile-item { flex: 1; min-width: 0; }
-.profile-item, .thinking-item, .branch-item {
+.profile-item, .thinking-item, .branch-item, .pstrip-item {
   appearance: none; border: 0; background: transparent;
   display: flex; align-items: center; gap: 8px;
   padding: 5px 8px; border-radius: var(--r-1);
   font-size: var(--d-text-sm); color: var(--fg-2);
   text-align: left; cursor: pointer;
 }
-.profile-item:hover, .thinking-item:hover, .branch-item:hover { background: var(--bg-hover); color: var(--fg); }
+.profile-item:hover, .thinking-item:hover, .branch-item:hover, .pstrip-item:hover { background: var(--bg-hover); color: var(--fg); }
 /* The row button is not a `.btn`, so it misses the global focus ring in
    styles.css - without this, tabbing lights the two small icon buttons and
    leaves the primary target between them invisible. */
-.profile-item:focus-visible, .thinking-item:focus-visible, .branch-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+.profile-item:focus-visible, .thinking-item:focus-visible, .branch-item:focus-visible, .pstrip-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .profile-item.active, .thinking-item.active { color: var(--fg); }
 /* The thinking and branch menus (positioned in composer.css / rail.css):
    a pick in flight, the notes under the rows, and rows whose hint or age

@@ -19,21 +19,20 @@
 
 const {
   Icon, ChatView, PlanPill, Composer, CommandBridge, WindowChrome, Toolbar, TabBar, SubagentPane,
-  ActivityBar, SidePanel, SidePanelStub, WorkspacesView, EmptyWorkspace,
+  ProjectStrip, ProjectSide, EmptyWorkspace,
   StatusBar, ConversationTree, HistoryModal, GitBrowser, FilePreview, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, useTweaks,
   SettingsPage, ConfirmCloseDialog,
   useWidgets, WidgetCard, WidgetErrorCard, WidgetApprovalCard, WidgetBoundary,
   TWEAK_DEFAULTS, NULL_MODEL, EMPTY_PROJECT, DEFAULT_PROFILE_ID,
   INTENT_FRAMING, APPROVAL_PROMPT,
   useBridgeSnapshot, useThemeEffect, useSubagentManager, useUpdater, useConversationTree, useGoalMode, useTerminal, TerminalPanels, timeNow,
-  useKeymap, useKeymapDispatch, useBrowser, BrowserDock, FilesPanel, FilesView, useFileComments, MarkdownLinkContext: _AL_MdLinkCtx,
-  usePaneWidths, ResizeHandle, useRemote, usePrAutomation, SessionView,
+  useKeymap, useKeymapDispatch, useBrowser, BrowserDock, FilesPanel, useFileComments, MarkdownLinkContext: _AL_MdLinkCtx,
+  usePaneWidths, ResizeHandle, useRemote, usePrAutomation,
 } = window;
 const { routeSubmit: _routeSubmit } = window.OMP_SLASH;
 const { mergeIntoMessage: _mergeBrowserChips, browserCommand: _browserCommand, MIN_WIDTH: _AL_BROWSER_MIN } = window.OMP_BROWSER;
 const { mergeIntoMessage: _mergeFileMarks } = window.OMP_FILE_COMMENTS;
-const { recentRows, groupKey, moveGroup, moveMember, shiftGroup } = window.OMP_PROJECT_NAV;
-const { DEFAULT: _ACT_DEFAULT, openView: _actOpen } = window.OMP_ACTIVITY;
+const { groupTabs, groupKey, moveGroup, moveMember, shiftGroup, recentRows } = window.OMP_PROJECT_NAV;
 const { toggle: _svToggle } = window.OMP_SESSION_VIEW;
 const {
   entryOf, updateEntry, pruneEntries, seedEntries,
@@ -161,22 +160,22 @@ function App() {
   // Which profile is ticked as the default for new tabs / the next launch.
   // App-wide and persisted, unlike a tab's own profile.
   const [startupProfileId, setStartupProfileId] = React.useState(DEFAULT_PROFILE_ID);
-  // Recently opened folders of the active tab's profile (Workspaces view).
+  // Recently opened folders of the active tab's profile (history / empty CTA).
   const [recentProjects, setRecentProjects] = React.useState([]);
-  // Activity bar + side panel (window-global view; re-click collapses).
-  // `open` stays in sync with the Layout → Side panel tweak (`sidebar`).
-  const [sideActivity, setSideActivity] = React.useState(() => ({
-    view: _ACT_DEFAULT.view,
-    open: t.sidebar ?? true,
-  }));
-  const applySideActivity = React.useCallback(next => {
-    setSideActivity(next);
-    setTweak("sidebar", next.open);
+  // Project side panel open (Layout → Side panel tweak `sidebar`).
+  const [projectSideOpen, setProjectSideOpen] = React.useState(() => t.sidebar ?? true);
+  const [sideFolds, setSideFolds] = React.useState({ sessions: true, explorer: true });
+  const setProjectSide = React.useCallback(open => {
+    setProjectSideOpen(open);
+    setTweak("sidebar", open);
   }, [setTweak]);
   React.useEffect(() => {
     const open = t.sidebar ?? true;
-    setSideActivity(a => (a.open === open ? a : { ...a, open }));
+    setProjectSideOpen(v => (v === open ? v : open));
   }, [t.sidebar]);
+  const toggleSideFold = React.useCallback(id => {
+    setSideFolds(f => ({ ...f, [id]: f[id] === false }));
+  }, []);
   // With no tab open: the profile the next tab opens under (the menu's pick,
   // else the startup default — resolved by the bridge), and notes filed
   // while there was no transcript to hold them.
@@ -296,8 +295,8 @@ function App() {
   // streaming frames that finish no edit leave the memoised browser alone.
   const gitEdits = React.useMemo(() => (gitOpen ? _gitFinishedEdits(messages) : 0), [gitOpen, messages]);
   const filesEdits = React.useMemo(() =>
-    (side === "files" || (sideActivity.open && sideActivity.view === "files") ? _gitFinishedEdits(messages) : 0),
-    [side, sideActivity.open, sideActivity.view, messages]);
+    (side === "files" || (projectSideOpen && sideFolds.explorer !== false) ? _gitFinishedEdits(messages) : 0),
+    [side, projectSideOpen, sideFolds.explorer, messages]);
   // Collapse all / Expand all: one toggle per block in this tab, replacing
   // the tab's earlier ones; later blocks follow the modes again.
   const handleCollapseAll = (collapsed) => setCollapseOverrides(m => updateEntry(m, planKey, NO_COLLAPSE_OVERRIDES,
@@ -465,7 +464,7 @@ function App() {
   const files = useFileComments({
     bridge, tabId: activeProject.id, sessionIds,
     // The Files activity view fetches too, not only the stage panel.
-    open: side === "files" || (sideActivity.open && sideActivity.view === "files"),
+    open: side === "files" || (projectSideOpen && sideFolds.explorer !== false),
     setOpen: setFilesOpen,
     project: activeProject, edits: filesEdits,
   });
@@ -515,7 +514,9 @@ function App() {
   const railVisible = t.layout !== "focus" && !!activeProject.id;
   // The Session activity view hosts the per-tab cards the rail used to
   // (decisions 12): the PR hook may read while either is on screen.
-  const sessionViewShown = sideActivity.open && sideActivity.view === "session";
+  // Session tools move to the tool dock in phase 2; until then the Session
+  // activity view is gone, so PR Auto-fix visibility follows rail only.
+  const sessionViewShown = false;
   const widgets = useWidgets({
     bridge, activeSessionId: activeProject.id, activeProjectPath: activeProject.path ?? null, railVisible, tweaks: t, setTweak,
   });
@@ -820,12 +821,18 @@ function App() {
   // activates a background tab first and keeps the transcript clean.
   const handleRenameTab = (id, title) => { bridge?.renameSession(id, title); };
 
-  // ── Project navigation / activity bar ─────────────────────────────────────
-  // Side panel open/collapse (phase 1 remaps the old sidebar toggle).
-  const sidePanelOpen = sideActivity.open;
-  const toggleSidePanel = () => applySideActivity({ ...sideActivity, open: !sideActivity.open });
-  const focusWorkspaces = () => applySideActivity(_actOpen(sideActivity, "workspaces"));
-  const openWorkspaceBrowse = () => { focusWorkspaces(); handleNewProject(); };
+  // ── Project strip + project side ──────────────────────────────────────────
+  const sidePanelOpen = projectSideOpen;
+  const toggleSidePanel = () => setProjectSide(!projectSideOpen);
+  const openWorkspaceBrowse = () => {
+    setProjectSide(true);
+    handleNewProject();
+  };
+  const projectGroups = React.useMemo(() => groupTabs(sessions), [sessions]);
+  const activeGroup = React.useMemo(() => {
+    if (!activeSessionId) return null;
+    return projectGroups.find(g => g.tabs.some(t => t.id === activeSessionId)) || null;
+  }, [projectGroups, activeSessionId]);
   // The Session view's accordion (app/session-view.js), per tab.
   const handleToggleSvFold = React.useCallback(
     section => setSvFolds(m => _svToggle(m, planKey, section)), [planKey]);
@@ -1116,76 +1123,48 @@ function App() {
             }}
             settings={{ active: stab.active, onOpen: () => openSettings() }}
           />
-          <TabBar
-            profiles={profiles}
-            projects={sessions}
-            activeId={stab.active ? null : activeSessionId}
-            onSelect={handleSelectTab}
-            onClose={handleCloseTab}
-            onRename={handleRenameTab}
-            onNewInProject={handleNewInProject}
-            onReorder={handleReorder}
-            settings={{ open: stab.open, active: stab.active, changed: settingsChanged }}
-            onSelectSettings={() => openSettings()}
-            onCloseSettings={closeSettings}
-          />
-
           <div ref={workspaceRef} className="workspace" style={panes.style}>
-            <ActivityBar
-              view={sideActivity.view}
-              open={sidePanelOpen}
-              onChange={applySideActivity}
+            <ProjectStrip
+              tabs={sessions}
+              activeId={stab.active ? null : activeSessionId}
+              projectAppearances={t.projectAppearance}
+              recents={recentRows(recentProjects, sessions, activeProfileId)}
+              profileLabel={profileLabel}
+              onSelectTab={handleSelectTab}
+              onOpenRecent={handleOpenRecent}
+              onForgetRecent={handleForgetRecent}
+              onOpenFolder={openWorkspaceBrowse}
             />
-            <SidePanel open={sidePanelOpen}>
-              {sideActivity.view === "workspaces" && (
-                <WorkspacesView
-                  tabs={sessions}
-                  activeId={stab.active ? null : activeSessionId}
-                  projectAppearances={t.projectAppearance}
-                  recents={recentRows(recentProjects, sessions, activeProfileId)}
-                  profileLabel={profileLabel}
-                  onSelectTab={handleSelectTab}
-                  onCloseTab={handleCloseTab}
-                  onRenameTab={handleRenameTab}
-                  onNewInProject={handleNewInProject}
-                  onOpenRecent={handleOpenRecent}
-                  onForgetRecent={handleForgetRecent}
-                  onOpenFolder={handleNewProject}
-                  onReorder={handleReorder}
-                />
-              )}
-              {sideActivity.view === "files" && (
-                noTab
-                  ? <SidePanelStub title={OMP_TR("Files")} hint={OMP_TR("Open a workspace to browse this tab's files.")} />
-                  : <FilesView ui={files} onOpen={path => filesOpenAt({ path })}
-                    onReference={path => setPromptInsert({ text: "@" + path, append: true, sessionId: planKey, nonce: Date.now() })}
-                    onReveal={path => bridge.revealProjectFile(path)} />
-              )}
-              {sideActivity.view === "session" && (
-                noTab
-                  ? <SidePanelStub title={OMP_TR("Session")} hint={OMP_TR("Open a workspace to see this tab's tools.")} />
-                  : <SessionView
-                  tabId={planKey}
-                  show={{ context: t.showContext ?? true, radar: t.showRadar ?? true, subagents: t.showSubagents ?? true, minimap: t.showMinimap ?? true, changes: t.showChanges ?? true }}
-                  folds={svFolds} onToggleFold={handleToggleSvFold}
-                  ctx={liveCtx} sparklineValues={sparkline} activity={activity}
-                  subagents={subagentList}
-                  subagentPaneOpen={showSplit}
-                  onOpenSubagent={subagentUi.open}
-                  onToggleSubagentPane={subagentUi.togglePane}
-                  messages={messages}
-                  hoveredMsgIdx={hoveredMsgIdx}
-                  onMinimapHover={setHoveredMsgIdx}
-                  onMinimapClick={handleMinimapClick}
-                  prAutomation={prAutomation} prAvailable={!!activeProject.path && !!bridge?.isConnected}
-                  bridge={bridge}
-                  extCards={extCards.filter(c => t[c.tweak] !== false)}
-                  onWidgetInsert={handleWidgetInsert}
-                />
-              )}
-            </SidePanel>
+            <ProjectSide
+              open={sidePanelOpen}
+              folds={sideFolds}
+              onToggleFold={toggleSideFold}
+              group={activeGroup}
+              activeId={stab.active ? null : activeSessionId}
+              noTab={noTab}
+              onSelectTab={handleSelectTab}
+              onCloseTab={handleCloseTab}
+              onRenameTab={handleRenameTab}
+              onNewInProject={handleNewInProject}
+              onReorder={handleReorder}
+              files={files}
+              onOpenFile={path => filesOpenAt({ path })}
+              onReference={path => setPromptInsert({ text: "@" + path, append: true, sessionId: planKey, nonce: Date.now() })}
+              onReveal={path => bridge.revealProjectFile(path)}
+            />
             {sidePanelOpen && <ResizeHandle className="at-sidebar" {...panes.handle("sidebar")} />}
-            <div ref={stageRef} className={`stage ${side === "browser" ? `with-browser${browserFull ? " browser-full" : ""}` : sideRail ? `with-${sideRail}` : ""}`}>
+            <div className="main-column">
+              <TabBar
+                group={activeGroup}
+                activeId={stab.active ? null : activeSessionId}
+                onSelect={handleSelectTab}
+                onClose={handleCloseTab}
+                onReorder={handleReorder}
+                settings={{ open: stab.open, active: stab.active, changed: settingsChanged }}
+                onSelectSettings={() => openSettings()}
+                onCloseSettings={closeSettings}
+              />
+              <div ref={stageRef} className={`stage ${side === "browser" ? `with-browser${browserFull ? " browser-full" : ""}` : sideRail ? `with-${sideRail}` : ""}`}>
               <main className="session" onFocusCapture={prAutomation.onConversationFocus}>
                 {noTab ? (
                   <EmptyWorkspace
@@ -1337,6 +1316,7 @@ function App() {
                   <SettingsPage ctx={settingsCtx} />
                 </div>
               )}
+            </div>
             </div>
           </div>
           {/* Full window width under the workspace: no side column (rail,

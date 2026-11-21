@@ -6,8 +6,8 @@
    - Ambient rail: TokenGauge, ActivityRadar, subagents card, Minimap
    ═════════════════════════════════════════════════════════════════════ */
 
-const { Icon, TokenGauge, ActivityRadar, Sparkline, TOOL_META, DEFAULT_PROFILE_ID, TabGroupChip, BranchMenu } = window;
-const { groupTabs } = window.OMP_PROJECT_NAV;
+const { Icon, TokenGauge, ActivityRadar, Sparkline, TOOL_META, TabRunDot, BranchMenu } = window;
+const { membersNewestFirst } = window.OMP_PROJECT_NAV;
 
 // Thin wrappers around the shared `OMP_KEYMAP.hintFor`/`hintKeyFor` — same
 // guard and rationale as composer.jsx's copy (kept local rather than a
@@ -80,43 +80,36 @@ function tabClickProps(onSelect, onClose) {
   };
 }
 
+/** Thin session tabs for the active project only (project-dock-layout).
+   `group` is one `groupTabs` entry or null; Settings stays pinned after. */
 function TabBar({
-  projects, activeId, onSelect, onClose, onRename, onNewInProject, onReorder,
-  profiles = [],
+  group, activeId, onSelect, onClose, onReorder,
   settings, onSelectSettings, onCloseSettings,
 }) {
-  // Tabs can run under different profiles, so a tab whose profile is not the
-  // built-in one is labelled with it — otherwise two tabs on the same folder
-  // in different profiles look identical. Falls back to the raw id until the
-  // profile list has loaded.
-  const profileLabel = id =>
-    id === DEFAULT_PROFILE_ID ? null : (profiles.find(p => p.id === id)?.name ?? id);
-  // Drag to reorder (#40): projects along the bar ("projects", keyed by
-  // group), and a group chip's members in its dropdown (see TabGroupChip).
   const reorder = window.useDragReorder(onReorder);
+  const members = group ? `members:${group.key}` : null;
+  const rows = group ? membersNewestFirst(group) : [];
   return (
-    <div className="tabs" onPointerDown={reorder.onPointerDown}>
-      {/* Every project is one chip (#27), even with a single tab — the
-          dropdown is how you open another conversation in that folder. */}
-      {groupTabs(projects).map((group) => (
-        <TabGroupChip key={group.key}
-          group={group}
-          activeId={activeId}
-          profileLabel={profileLabel}
-          onSelect={onSelect}
-          onClose={onClose}
-          onNewInProject={onNewInProject}
-          onRename={onRename}
-          reorder={reorder}
-        />
+    <div className="session-tabs" onPointerDown={group ? reorder.onPointerDown : undefined}
+      role="tablist" aria-label={OMP_TR("open tabs")}>
+      {rows.map(t => (
+        <div key={t.id}
+          {...(members ? reorder.itemProps(members, t.id, "x") : {})}
+          className={`tab ${t.id === activeId ? "active" : ""}${members ? reorder.dropClass(members, t.id) : ""}`}
+          title={t.name}
+          {...tabClickProps(() => onSelect(t.id), () => onClose(t.id))}>
+          <TabRunDot state={t.runState} />
+          <span className="tab-name">{t.name}</span>
+          <button className="tab-close" title={`${OMP_TR("close")} (${hintFor("desktop.tab.close", "Ctrl+W")})`}
+            onClick={e => { e.stopPropagation(); onClose(t.id); }}>
+            <Icon name="close" size={9} />
+          </button>
+        </div>
       ))}
-      {/* The Settings app tab (#37): pinned after the projects, never
-          dragged; `changed` counts settings off their default. */}
       {settings?.open && (
         <div className={`tab app-tab ${settings.active ? "active" : ""}`}
           title={`${OMP_TR("settings")} (${hintFor("desktop.settings.open", "Ctrl+,")})`}
           {...tabClickProps(onSelectSettings, onCloseSettings)}>
-          <span className="tab-bar-mark" style={{ background: settings.active ? "var(--fg-3)" : "transparent" }} />
           <Icon name="cog" size={12} />
           <span className="tab-name">{OMP_TR("Settings")}</span>
           {settings.changed > 0 && (
