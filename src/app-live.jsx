@@ -20,7 +20,7 @@
 const {
   Icon, ChatView, PlanPill, Composer, CommandBridge, WindowChrome, Toolbar, TabBar, SubagentPane,
   ProjectStrip, ProjectSide, EmptyWorkspace, ToolDock,
-  StatusBar, ConversationTree, HistoryModal, GitBrowser, FilePreview, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, useTweaks,
+  StatusBar, ConversationTree, HistoryModal, GitBrowser, FilePreview, FilePreviewTitle, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, useTweaks,
   SettingsPage, ConfirmCloseDialog,
   useWidgets, WidgetCard, WidgetErrorCard, WidgetApprovalCard, WidgetBoundary,
   TWEAK_DEFAULTS, NULL_MODEL, EMPTY_PROJECT, DEFAULT_PROFILE_ID,
@@ -177,8 +177,10 @@ function App() {
     setSideFolds(f => ({ ...f, [id]: f[id] === false }));
   }, []);
   // Right tool dock (phase 2): `{ tab, open }` (app/tool-dock.js), one pane
-  // at a time; re-clicking the active tab collapses the pane.
+  // at a time; re-clicking the active tab collapses the pane. `fileMeta` is
+  // the File pane's dock-head crumbs (path / lines / truncated / size).
   const [dock, setDock] = React.useState({ tab: null, open: false });
+  const [fileMeta, setFileMeta] = React.useState(null);
   const dockSelect = React.useCallback(id => setDock(d => _dockSelect(d, id)), []);
   const dockClose = React.useCallback(() => setDock(_dockClose), []);
   // With no tab open: the profile the next tab opens under (the menu's pick,
@@ -293,18 +295,22 @@ function App() {
   const closeGit = React.useCallback(() => setGitOpen(null), []);
   // A read card's path: the preview, bound to this tab — and the File dock
   // tab selected (decisions 17/21; a Session/Tree pane gives way, open
-  // question 7's default).
+  // question 7's default). Dock width is whatever the user last saved
+  // (`dockWidth`); widen it by dragging if needed.
   const handlePreviewFile = React.useCallback(target => {
     setPreview({ key: planKey, target });
+    setFileMeta(null); // drop previous file's chips until the new read lands
     setDock(_dockOpenFile);
   }, [planKey]);
   // × / Esc on the preview: clear the target, and collapse the dock when
   // the File tab is the one shown (phase-2 plan's preferred close UX).
   const closePreview = React.useCallback(() => {
     setPreview(null);
+    setFileMeta(null);
     setDock(d => (d.tab === "file" ? _dockClose(d) : d));
   }, []);
-  const previewToGit = React.useCallback(path => { setPreview(null); handleOpenFile(path); }, [handleOpenFile]);
+  // Git overlay on top: keep the File dock preview open underneath.
+  const previewToGit = React.useCallback(path => { handleOpenFile(path); }, [handleOpenFile]);
   // The git browser and the files panel refetch when this count rises;
   // counted only while one is open, and handed over as a number so
   // streaming frames that finish no edit leave the memoised browser alone.
@@ -487,8 +493,6 @@ function App() {
     project: activeProject, edits: filesEdits,
   });
   const filesOpenAt = files.openAt;
-  const previewToFiles = React.useCallback(
-    (path, range) => { setPreview(null); filesOpenAt({ path, range }); }, [filesOpenAt]);
   // Clicks on links in the agent's markdown: a project file opens the
   // preview (Ctrl/⌘-click: the git browser, Alt-click: the files panel);
   // anything else goes on to the browser panel's localhost handler.
@@ -1187,7 +1191,7 @@ function App() {
               onNewInProject={handleNewInProject}
               onReorder={handleReorder}
               files={files}
-              onOpenFile={path => filesOpenAt({ path })}
+              onOpenFile={path => handlePreviewFile({ path })}
               onReference={path => setPromptInsert({ text: "@" + path, append: true, sessionId: planKey, nonce: Date.now() })}
               onReveal={path => bridge.revealProjectFile(path)}
             />
@@ -1341,7 +1345,10 @@ function App() {
               tab={dock.tab}
               open={_dockIsOpen(dock)}
               label={dock.tab === "file" ? "File" : dock.tab === "session" ? "Session" : dock.tab === "tree" ? "Tree" : "Usage"}
-              head={dock.tab === "session" || dock.tab === "tree"}
+              head={dock.tab === "file" || dock.tab === "session" || dock.tab === "tree"}
+              title={dock.tab === "file" && preview && preview.key === planKey
+                ? <FilePreviewTitle meta={fileMeta} fallbackPath={preview.target.path} onOpenGit={previewToGit} />
+                : undefined}
               onSelect={dockSelect}
               onClose={dock.tab === "file" ? closePreview : dockClose}
               resize={panes.handle("dock")}
@@ -1357,7 +1364,7 @@ function App() {
               {dock.tab === "file" ? (
                 preview && preview.key === planKey ? (
                   <FilePreview target={preview.target} onClose={closePreview}
-                    onOpenGit={previewToGit} onComment={previewToFiles} />
+                    onOpenGit={previewToGit} headless onMeta={setFileMeta} />
                 ) : (
                   <div className="dock-pane-stub">{OMP_TR("Open a file from the chat or the explorer.")}</div>
                 )
@@ -1440,10 +1447,6 @@ function App() {
         <GitBrowser key={gitProject ?? ""} bridge={bridge}
           initialPath={gitOpen.project === gitProject ? gitOpen.path : null}
           onClose={closeGit} branch={activeProject.branch ?? null} edits={gitEdits} />
-      )}
-
-      {preview && preview.key === planKey && (
-        <FilePreview target={preview.target} onClose={closePreview} onOpenGit={previewToGit} onComment={previewToFiles} />
       )}
 
       {rulesOpen && (

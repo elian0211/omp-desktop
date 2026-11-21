@@ -86,6 +86,14 @@
 
   const EMPTY_PROJECT = { id: "", name: "OMP Desktop", path: "", color: "var(--accent)", branch: "", profile: DEFAULT_PROFILE_ID };
 
+  // `true` only under `tauri dev`: the CLI serves `src/` over http on
+  // localhost; release builds load the embedded dist over
+  // tauri://localhost (http://tauri.localhost on Windows). Drives
+  // chrome.jsx's DEV chip.
+  const IS_DEV = typeof location !== "undefined" &&
+    location.protocol === "http:" &&
+    (location.hostname === "localhost" || location.hostname === "127.0.0.1");
+
   const INTENT_FRAMING = (intent) =>
     `Please draft a plan for the following task. Write it in Markdown with clear sections: overview, approach, key steps, and risks. Do not start implementing yet — draft only for my review.\n\n---\n\n${intent.trim()}`;
 
@@ -142,6 +150,7 @@
     TWEAK_DEFAULTS,
     NULL_MODEL,
     EMPTY_PROJECT,
+    IS_DEV,
     DEFAULT_PROFILE_ID,
     INTENT_FRAMING,
     APPROVAL_PROMPT,

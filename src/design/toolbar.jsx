@@ -91,8 +91,6 @@ function Toolbar({ nav, subagents, browser, terminal, onGit, approvals, onComman
         <span className="tb-sep" />
 
         <ToolButton icon="diff2" title={_tbTip("git browser", "desktop.panel.changes")} onClick={onGit} />
-        <ToolButton icon="cog" title={_tbTip("settings", "desktop.settings.open")}
-          pressed={settings.active} onClick={settings.onOpen} />
       </div>
 
       <div className="tb-end">

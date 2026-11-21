@@ -238,7 +238,7 @@
   color-scheme: light;
 }
 
-/* VS-flavoured chrome, colours as given: blue title bar and activity bar,
+/* VS-flavoured chrome, colours as given: blue title bar and project strip,
    periwinkle tab strip, toolbar fading across the two blues, dark-slate
    status bar with light text. */
 .theme-visualstudio .chrome {

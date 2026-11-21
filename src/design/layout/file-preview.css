@@ -12,17 +12,14 @@
 /* The panel fills the tool dock's File pane (docked presentation); the
    modal scrim of the old preview is gone. */
 .fp-panel {
-  width: min(1100px, 88vw); height: min(800px, 86vh);
+  width: 100%; height: 100%;
   display: flex; flex-direction: column; gap: 10px;
   padding: 10px;
-  background: var(--bg-surface);
-  border: 1px solid var(--line-bright);
-  border-radius: var(--r-3);
-  box-shadow: var(--shadow-window);
+  background: var(--bg-window);
   overflow: hidden;
-  animation: fpIn 220ms var(--ease-out);
 }
-@keyframes fpIn { from { opacity: 0; transform: translateY(8px) scale(0.985); } }
+/* Dock owns the title bar: body fills the pane. */
+.fp-panel.is-headless { gap: 0; padding: 8px; }
 
 .fp-head {
   display: flex; align-items: center; gap: 8px;
@@ -34,7 +31,8 @@
 .fp-head .chip { white-space: nowrap; }
 .fp-spacer { flex: 1; }
 .fp-head .btn { white-space: nowrap; }
-.fp-copy { position: static; opacity: 1; }
+.fp-git { flex: none; width: 20px; height: 20px; color: var(--fg-3); }
+.fp-git:hover { color: var(--fg); }
 
 /* The body is an inset card: the scrollbars (horizontal included) sit
    inside the panel with a margin, never flush against its edge. */
@@ -100,6 +98,3 @@
   box-shadow: var(--shadow-pop);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .fp-panel { animation: none; }
-}

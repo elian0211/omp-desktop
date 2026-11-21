@@ -1,14 +1,14 @@
 /* ═════════════════════════════════════════════════════════════════════
-   files/files-view.jsx — the Files activity view in the side panel
-   (docs/plans/2026-11-20-workspace-layout/phase-2-side-views.md): the
-   active tab's project file tree only. Selecting a file opens the
-   existing stage FilesPanel (the detail lives there, not in the narrow
-   panel) through `onOpen`, which app-live wires to `files.openAt`.
+   files/files-view.jsx — the Explorer fold's project file tree
+   (docs/plans/2026-11-21-project-dock-layout/). Selecting a file goes
+   through `onOpen`; app-live wires that to the tool dock's File preview
+   (`handlePreviewFile`). The stage FilesPanel (comment detail) stays a
+   separate handoff from the preview header.
 
    Props: { ui, onOpen, onReference, onReveal }
      ui    — useFileComments (app/use-file-comments.jsx); the same object
              the stage FilesPanel gets, so selection and marks stay shared
-     onOpen— path → open that file in the stage FilesPanel
+     onOpen— path → open that file (File dock preview in app-live)
      onReference — path → appends `@path` to the tab's composer draft
                    (the tree's right-click menu)
      onReveal    — path → reveal the file in the OS file manager

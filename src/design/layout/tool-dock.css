@@ -15,10 +15,30 @@
   height: 28px; padding: 0 4px 0 10px; flex: none;
   border-bottom: 1px solid var(--line-soft);
 }
+/* File pane: path + chips need a touch more height than "Session". */
+.dock-pane-head.is-file {
+  height: auto; min-height: 28px;
+  padding: 4px 4px 4px 8px;
+}
 .dock-pane-title {
   flex: 1; min-width: 0;
   font-size: var(--d-text-xs); font-weight: 600; color: var(--fg-3);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dock-pane-title.has-node {
+  overflow: hidden; white-space: normal;
+  font-weight: 500; color: var(--fg-2);
+}
+.dock-file-meta {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0; max-width: 100%;
+  overflow: hidden;
+}
+.dock-file-meta .fp-crumb { flex: 1 1 auto; min-width: 0; }
+.dock-file-meta .fp-git { flex: none; }
+.dock-file-meta .chip {
+  flex: none; white-space: nowrap;
+  font-size: 10px; padding: 1px 6px;
 }
 .dock-pane-close { flex: none; width: 20px; height: 20px; }
 .dock-pane-x { font-size: 12px; line-height: 1; }
@@ -26,15 +46,6 @@
   flex: 1; min-height: 0; min-width: 0;
   display: flex; flex-direction: column;
   overflow: hidden;
-}
-
-/* The File pane hosts FilePreview directly: its head is the pane head
-   (path + actions + close), the panel fills the pane. */
-.dock-pane .fp-panel {
-  width: 100%; height: 100%;
-  max-width: none; max-height: none;
-  border: 0; border-radius: 0; box-shadow: none;
-  animation: none;
 }
 
 /* Session pane: the session tools column, plugin widget cards under it. */

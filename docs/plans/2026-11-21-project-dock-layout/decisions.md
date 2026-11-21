@@ -27,7 +27,7 @@ Product rules agreed in the 2026-11-21 layout discussion (Pencil sketch B). Impl
 
 13. The panel beside the strip has **exactly two folds** (both can be open; not mutually exclusive activity views):
     - **Sessions** — decision 9–10
-    - **Explorer** — today’s `FilesView` tree (toggles as today). Selecting a file still opens the existing files **detail** / comment path in the stage when that flow is used.
+    - **Explorer** — today’s `FilesView` tree (toggles as today). Selecting a file opens the tool dock’s **File** preview; the stage files **detail** / comment path stays available via the preview’s “Comment in files panel” handoff (and other existing entry points).
 14. Side panel width remains user-resizable (reuse `sidebarWidth` / pane widths). Strip width is fixed (CSS variable), not user-resized.
 15. No open tab / no project: strip still shows `+` and any recents affordance; Sessions/Explorer folds show empty hints pointing at open-workspace.
 

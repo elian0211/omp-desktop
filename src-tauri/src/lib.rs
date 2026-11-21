@@ -1576,6 +1576,10 @@ fn setup(app: &tauri::App) {
     #[cfg(debug_assertions)]
     if let Some(win) = app.get_webview_window("main") {
         win.open_devtools();
+        // Taskbar/Alt-Tab marker; the in-app badge is chrome.jsx's DEV chip
+        // (`window.IS_DEV`). Dev runs under its own identifier
+        // (`tauri.dev.conf.json`), so it can live beside the installed app.
+        let _ = win.set_title("DEV · OMP Desktop");
     }
     // Every store below is memory-only without it (see `config_dir`).
     let resolved_config_dir = config_dir(app.path().app_config_dir());

@@ -10,7 +10,7 @@
      thumbFor — i → the thumbnail element to fly from / back into
 
    Also ImageThumbs (a message's thumbnail strip, opening the viewer) and
-   useModalLayer (the modal behaviour it shares with chat/file-preview.jsx).
+   useModalLayer (scrim + focus trap for this lightbox).
    ═════════════════════════════════════════════════════════════════════ */
 const { Icon: _LB_Icon } = window;
 const { fitRect: _LB_fitRect, flipTransform: _LB_flipTransform, stepIndex: _LB_stepIndex } = window.OMP_LIGHTBOX;

@@ -37,6 +37,7 @@ function WindowChrome({ project }) {
       )}
 
       <div className="chrome-title">
+        {window.IS_DEV && <span className="dev-chip">DEV</span>}
         {/* No tab: EMPTY_PROJECT's name is the app's own, so no "OMP ·" prefix. */}
         {project.id && <>
           <span className="mono" style={{ color: "var(--fg-3)" }}>OMP</span>

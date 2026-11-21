@@ -3,12 +3,12 @@
    far right of the workspace, one pane between the chat column and the
    tabs (decisions 16–17). Re-clicking the active tab collapses the pane,
    the tabs stay. The pane body is the caller's (`children`); its × is the
-   caller's close (the File pane's own head closes the preview instead —
-   no second ×). Dock state lives in app/tool-dock.js. */
+   caller's close. `title` may replace the plain `label` in the head (the
+   File pane puts path / lines / size there). Dock state: app/tool-dock.js. */
 
 const DOCK_MEMBERS = [["file", "File"], ["session", "Session"], ["tree", "Tree"], ["usage", "Usage"]];
 
-function ToolDock({ tab, open, label, head, actions, onSelect, onClose, resize, children }) {
+function ToolDock({ tab, open, label, title, head, actions, onSelect, onClose, resize, children }) {
   const active = open ? tab : null;
   return (
     <>
@@ -19,8 +19,10 @@ function ToolDock({ tab, open, label, head, actions, onSelect, onClose, resize, 
           aria-label={label ? OMP_TR(label) : OMP_TR("Tool dock")}
         >
           {head && (
-            <div className="dock-pane-head">
-              <span className="dock-pane-title">{OMP_TR(label)}</span>
+            <div className={`dock-pane-head${tab === "file" ? " is-file" : ""}`}>
+              <span className={`dock-pane-title${title ? " has-node" : ""}`}>
+                {title ?? OMP_TR(label)}
+              </span>
               {actions}
               <button type="button" className="btn ghost icon dock-pane-close"
                 title={OMP_TR("Close (Esc)")} aria-label={OMP_TR("Close")}

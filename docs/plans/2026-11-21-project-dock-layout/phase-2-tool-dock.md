@@ -49,7 +49,7 @@
 ## 2.4 Interaction with phase 1 side
 
 - Opening File dock does **not** collapse Explorer fold.
-- Explorer file click → files **detail** stage remains distinct from File **preview** dock (decision 20–22).
+- Explorer file click → File **preview** dock (decision 20–22; files **detail** stays a comment handoff from the preview header).
 
 ## 2.5 Acceptance
 

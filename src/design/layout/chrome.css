@@ -41,6 +41,13 @@
 /* Baseline, not center: JetBrains Mono ("OMP ·") sits its glyphs higher in
    the line box than Geist (the project name), so centred boxes misalign the text. */
 .chrome-title { display: flex; align-items: baseline; gap: 6px; font-size: var(--d-text-sm); flex: 1; justify-content: center; }
+.dev-chip {
+  align-self: center; padding: 1px 6px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+}
 .chrome-right { display: flex; align-items: center; gap: 6px; }
 
 /* ── Per-tab profile selector ─────────────────────────────────────────── */

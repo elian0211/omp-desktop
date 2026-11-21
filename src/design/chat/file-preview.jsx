@@ -6,17 +6,20 @@
    (project-dock-layout phase 2): no modal scrim, the chat beside it
    stays usable.
 
-   Props: { target, onClose, onOpenGit, onComment }
+   Props: { target, onClose, onOpenGit, headless, onMeta }
      target    — { path, range } (app/file-preview.js readTarget/linkTarget)
-     onClose   — Esc, the close button in the panel head
-     onOpenGit — path → the git browser on that file (the preview closes)
-     onComment — (path, range) → the files panel on that file and range
-                 (the preview closes); text files only
+     onClose   — Esc (and the dock head × when headless)
+     onOpenGit — path → the git browser on that file (preview stays open)
+     headless  — dock owns the title bar (path / git / lines / truncated /
+                 size); this panel is body-only
+     onMeta    — (meta) → parent fills the dock head; called whenever the
+                 loaded snapshot changes
 
    Also exports FILE_STATES and FileState (the non-text states), which the
-   files panel (design/files/) shows too.
+   files panel (design/files/) shows too, and FilePreviewTitle for the
+   dock head.
    ═════════════════════════════════════════════════════════════════════ */
-const { Icon: _FP_Icon, CopyButton: _FP_Copy } = window;
+const { Icon: _FP_Icon } = window;
 const {
   highlightLines: _FP_highlight, clipLines: _FP_clip,
   inRange: _FP_inRange, MAX_LINES: _FP_MAX_LINES, MAX_LINE_CHARS: _FP_MAX_LINE_CHARS,
@@ -96,7 +99,50 @@ function FileState({ title, sub }) {
   );
 }
 
-function FilePreview({ target, onClose, onOpenGit, onComment }) {
+/** Icon-only git affordance for the dock / panel head. */
+function _FP_GitBtn({ path, onOpenGit }) {
+  if (!onOpenGit || !path) return null;
+  return (
+    <button type="button" className="btn ghost icon fp-git"
+      onClick={() => onOpenGit(path)}
+      title={OMP_TR("Open in the git browser")}
+      aria-label={OMP_TR("Open in the git browser")}>
+      <_FP_Icon name="branch" size={12} />
+    </button>
+  );
+}
+
+/** Dock title-bar: path, git (before chips), lines / truncated / size / range. */
+function FilePreviewTitle({ meta, fallbackPath, onOpenGit }) {
+  const path = meta?.path ?? fallbackPath ?? "";
+  const slash = path.search(/[^/\\]*$/);
+  const openable = meta ? meta.openable : true;
+  return (
+    <span className="dock-file-meta">
+      <_FP_Icon name={meta?.kind === "Image" ? "image" : "file"} size={13} color="var(--cyan)" />
+      <span className="fp-crumb mono" title={path}>
+        {path.slice(0, slash)}<b>{path.slice(slash)}</b>
+      </span>
+      {openable && <_FP_GitBtn path={path} onOpenGit={onOpenGit} />}
+      {meta?.lines != null && (
+        <span className="chip muted mono">{meta.lines} {OMP_TR("lines")}</span>
+      )}
+      {meta?.truncated && (
+        <span className="chip warn mono" title={OMP_TR("Keep scrolling: the rest loads as you go (up to {n} lines); each line cut at {m} characters.", { n: _FP_MAX_LINES, m: _FP_MAX_LINE_CHARS })}>{OMP_TR("truncated")}</span>
+      )}
+      {meta?.sizeLabel && (
+        <span className="chip muted mono">{meta.sizeLabel}</span>
+      )}
+      {meta?.range && (
+        <span className="chip accent mono">
+          {meta.range.to === meta.range.from ? `line ${meta.range.from}` : `read ${meta.range.from}–${meta.range.to}`}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function FilePreview({ target, onClose, onOpenGit, headless = false, onMeta }) {
   // null while loading; then the bridge's `{ok, value | error}`.
   const [res, setRes] = React.useState(null);
 
@@ -134,6 +180,22 @@ function FilePreview({ target, onClose, onOpenGit, onComment }) {
   const imgSrc = React.useMemo(() => (value?.kind === "Image" ? _FP_toDataUrl(value) : null), [value]);
   const range = target.range;
 
+  // Parent clears meta on close; no cleanup null here — that would flash
+  // the dock head empty between path changes.
+  React.useEffect(() => {
+    if (!onMeta) return;
+    const sizeOk = value && value.kind !== "Missing" && value.kind !== "Outside";
+    onMeta({
+      path: shownPath,
+      kind: value?.kind ?? null,
+      lines: clip?.total ?? null,
+      truncated: !!clip?.truncated,
+      sizeLabel: sizeOk ? _FP_size(value.size) : null,
+      range: value?.kind === "Text" ? range ?? null : null,
+      openable,
+    });
+  }, [onMeta, shownPath, value, clip, range, openable]);
+
   let body;
   if (!res) body = <div className="fp-state"><span className="shimmer-text">{OMP_TR("Loading…")}</span></div>;
   else if (!res.ok) body = <FileState title={OMP_TR("Can't preview this file")} sub={res.error} />;
@@ -148,19 +210,21 @@ function FilePreview({ target, onClose, onOpenGit, onComment }) {
     );
   } else body = <_FP_TextBody path={shownPath} text={clip.text} range={range} />;
 
-  // Docked pane (project-dock-layout phase 2): the panel is the tool
-  // dock's File pane body — no scrim, the chat beside it stays usable.
+  // Docked pane: the panel is the tool dock's File pane body — no scrim.
+  // With `headless`, path / git / chips live in the dock head.
   return (
     <div
-      className="fp-panel"
+      className={`fp-panel${headless ? " is-headless" : ""}`}
       role="region"
       aria-label={OMP_TR("Preview of {path}", { path: shownPath })}
     >
-      <div className="fp-head">
+      {!headless && (
+        <div className="fp-head">
           <_FP_Icon name={value?.kind === "Image" ? "image" : "file"} size={13} color="var(--cyan)" />
           <span className="fp-crumb mono" title={shownPath}>
             {shownPath.slice(0, slash)}<b>{shownPath.slice(slash)}</b>
           </span>
+          {openable && <_FP_GitBtn path={shownPath} onOpenGit={onOpenGit} />}
           {clip && <span className="chip muted mono">{clip.total} {OMP_TR("lines")}</span>}
           {clip?.truncated && (
             <span className="chip warn mono" title={OMP_TR("Keep scrolling: the rest loads as you go (up to {n} lines); each line cut at {m} characters.", { n: _FP_MAX_LINES, m: _FP_MAX_LINE_CHARS })}>{OMP_TR("truncated")}</span>
@@ -172,25 +236,14 @@ function FilePreview({ target, onClose, onOpenGit, onComment }) {
             </span>
           )}
           <div className="fp-spacer" />
-          <_FP_Copy className="fp-copy" label={OMP_TR("Copy the project-relative path")} text={shownPath} />
-          {onComment && value?.kind === "Text" && (
-            <button type="button" className="btn outlined fp-comment" onClick={() => onComment(shownPath, range ?? null)}
-              title={OMP_TR("Explain or comment lines of this file in the files panel")}>
-              <_FP_Icon name="edit" size={12} /> {OMP_TR("Comment in files panel")}
-            </button>
-          )}
-          {openable && (
-            <button type="button" className="btn outlined" onClick={() => onOpenGit(shownPath)} title={OMP_TR("Open in the git browser")}>
-              <_FP_Icon name="branch" size={12} /> {OMP_TR("Open in git browser")}
-            </button>
-          )}
           <button type="button" className="btn ghost icon" onClick={onClose} title={OMP_TR("Close (Esc)")} aria-label={OMP_TR("Close")}>
             <_FP_Icon name="close" size={12} />
           </button>
         </div>
-        <div className="fp-body">{body}</div>
+      )}
+      <div className="fp-body">{body}</div>
     </div>
   );
 }
 
-Object.assign(window, { FilePreview, FILE_STATES, FileState });
+Object.assign(window, { FilePreview, FilePreviewTitle, FILE_STATES, FileState });

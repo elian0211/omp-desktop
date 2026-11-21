@@ -21,7 +21,7 @@ Choices still free **inside** [`decisions.md`](./decisions.md). Resolve at phase
 
 10. **Usage in dock** — **Resolved: the full `UsageStatsPanel`**, docked (`docked` prop drops the scrim; the panel head keeps refresh + close).
 11. **Tree refresh control** — **Resolved: dock header** (a refresh button in the dock pane head when the Tree tab is open); the toolbar's tree cluster is gone.
-12. **`side === "files"` detail** vs File dock — **Resolved: not exclusive**; the files detail stays a stage column (`side === "files"`), the File preview a dock pane, and both can be open at once (decision 22's "prefer mutual exclusion or handoff" is served by the existing preview→files handoff button).
+12. **`side === "files"` detail** vs File dock — **Resolved: Explorer opens the File dock**; the files detail stays a stage column (`side === "files"`) for the comment flow, reached from the preview header handoff (and Alt-click / existing entry points). Both can still be open at once.
 13. **Git dock later** — still a follow-up, not blocking v1 (decisions 18/3.6 unchanged).
 
 ## Phase 4
