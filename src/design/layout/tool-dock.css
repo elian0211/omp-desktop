@@ -1,0 +1,85 @@
+/* Tool dock (2026-11-21 project-dock-layout): the pane between the chat
+   column and the vertical tab strip, both children of .workspace. Pane
+   width comes from use-pane-widths as --w-dock. */
+
+.dock-pane {
+  position: relative;
+  width: var(--w-dock, 300px);
+  flex: none; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+  border-left: 1px solid var(--line);
+  background: var(--bg-window);
+}
+.dock-pane-head {
+  display: flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 4px 0 10px; flex: none;
+  border-bottom: 1px solid var(--line-soft);
+}
+.dock-pane-title {
+  flex: 1; min-width: 0;
+  font-size: var(--d-text-xs); font-weight: 600; color: var(--fg-3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dock-pane-close { flex: none; width: 20px; height: 20px; }
+.dock-pane-x { font-size: 12px; line-height: 1; }
+.dock-pane-body {
+  flex: 1; min-height: 0; min-width: 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+/* The File pane hosts FilePreview directly: its head is the pane head
+   (path + actions + close), the panel fills the pane. */
+.dock-pane .fp-panel {
+  width: 100%; height: 100%;
+  max-width: none; max-height: none;
+  border: 0; border-radius: 0; box-shadow: none;
+  animation: none;
+}
+
+/* Session pane: the session tools column, plugin widget cards under it. */
+.dock-session {
+  overflow-y: auto;
+}
+.dock-widgets {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+/* File pane with no preview target (open question 8: a stub, so the File
+   tab is always meaningful). */
+.dock-pane-stub {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 16px; text-align: center;
+  color: var(--fg-4); font-size: var(--d-text-sm);
+}
+
+/* Vertical text tabs on the far right; visible whether or not a pane is
+   open (re-click collapses the pane, the tabs stay). */
+.dock-tabs {
+  width: 30px; flex: none; min-height: 0;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 0; gap: 6px;
+  border-left: 1px solid var(--line);
+  background: var(--bg-window);
+  overflow-y: auto;
+}
+.dock-tab {
+  appearance: none; border: 1px solid transparent; border-radius: var(--r-1);
+  padding: 8px 0; width: 100%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--fg-4); cursor: pointer;
+}
+.dock-tab:hover { background: var(--bg-hover); color: var(--fg-2); }
+.dock-tab.active {
+  border-color: var(--line-bright);
+  background: var(--bg-surface); color: var(--fg);
+}
+.dock-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.dock-tab-label {
+  writing-mode: vertical-rl;
+  font-size: var(--d-text-xs); font-weight: 600;
+  letter-spacing: 0.02em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-height: 220px;
+}

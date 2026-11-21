@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Tool dock** (project-dock redesign, phase 2): a far-right vertical tab strip opens one dock pane beside the chat — **File** hosts the file preview as a docked column (the modal scrim preview is retired; read cards and file links select the File tab, ×/Esc clear the preview and collapse the pane) and **Session** hosts the session tools (context, radar, subagents, changes, minimap, extension cards) with the plugin widget cards underneath — the standalone widget rail column disappears while the Session dock is open. Re-clicking the active dock tab collapses the pane. The pane width is resizable and persisted (`dockWidth`).
 - Layout shell for the **project-dock** redesign (phase 1): under the full-width title bar and toolbar, a **project strip** switches open folders (abbreviation + project accent, run badge); the **project side** panel has two folds — **Sessions** (this project only; click opens/focuses a tab) and **Explorer** (the file tree). Session tabs move under the toolbar as a thin strip for the active project only (no more project group chips as the primary switcher). The activity-bar Workspaces / Files / Session navigator is no longer mounted. Session tools return in the right tool dock (phase 2).
 
 ### Fixed

@@ -29,6 +29,7 @@
     rail: { min: 240, max: 520, wide: 280, narrow: 240 },
     tree: { min: 320, max: 900, wide: 540, narrow: 540 },
     files: { min: 420, max: 1600, wide: 760, narrow: 560 },
+    dock: { min: 240, max: 640, wide: 300, narrow: 260 },
   };
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));

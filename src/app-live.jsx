@@ -19,7 +19,7 @@
 
 const {
   Icon, ChatView, PlanPill, Composer, CommandBridge, WindowChrome, Toolbar, TabBar, SubagentPane,
-  ProjectStrip, ProjectSide, EmptyWorkspace,
+  ProjectStrip, ProjectSide, EmptyWorkspace, ToolDock,
   StatusBar, ConversationTree, HistoryModal, GitBrowser, FilePreview, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, useTweaks,
   SettingsPage, ConfirmCloseDialog,
   useWidgets, WidgetCard, WidgetErrorCard, WidgetApprovalCard, WidgetBoundary,
@@ -27,8 +27,9 @@ const {
   INTENT_FRAMING, APPROVAL_PROMPT,
   useBridgeSnapshot, useThemeEffect, useSubagentManager, useUpdater, useConversationTree, useGoalMode, useTerminal, TerminalPanels, timeNow,
   useKeymap, useKeymapDispatch, useBrowser, BrowserDock, FilesPanel, useFileComments, MarkdownLinkContext: _AL_MdLinkCtx,
-  usePaneWidths, ResizeHandle, useRemote, usePrAutomation,
+  usePaneWidths, ResizeHandle, useRemote, usePrAutomation, SessionView,
 } = window;
+const { select: _dockSelect, openFile: _dockOpenFile, close: _dockClose, isOpen: _dockIsOpen } = window.OMP_TOOL_DOCK;
 const { routeSubmit: _routeSubmit } = window.OMP_SLASH;
 const { mergeIntoMessage: _mergeBrowserChips, browserCommand: _browserCommand, MIN_WIDTH: _AL_BROWSER_MIN } = window.OMP_BROWSER;
 const { mergeIntoMessage: _mergeFileMarks } = window.OMP_FILE_COMMENTS;
@@ -176,6 +177,11 @@ function App() {
   const toggleSideFold = React.useCallback(id => {
     setSideFolds(f => ({ ...f, [id]: f[id] === false }));
   }, []);
+  // Right tool dock (phase 2): `{ tab, open }` (app/tool-dock.js), one pane
+  // at a time; re-clicking the active tab collapses the pane.
+  const [dock, setDock] = React.useState({ tab: null, open: false });
+  const dockSelect = React.useCallback(id => setDock(d => _dockSelect(d, id)), []);
+  const dockClose = React.useCallback(() => setDock(_dockClose), []);
   // With no tab open: the profile the next tab opens under (the menu's pick,
   // else the startup default — resolved by the bridge), and notes filed
   // while there was no transcript to hold them.
@@ -285,10 +291,19 @@ function App() {
     path => setGitOpen({ path: _gitAbsolutePath(gitProject, path), project: gitProject }),
     [gitProject]);
   const closeGit = React.useCallback(() => setGitOpen(null), []);
-  // A read card's path: the preview, bound to this tab.
-  const handlePreviewFile = React.useCallback(
-    target => setPreview({ key: planKey, target }), [planKey]);
-  const closePreview = React.useCallback(() => setPreview(null), []);
+  // A read card's path: the preview, bound to this tab — and the File dock
+  // tab selected (decisions 17/21; a Session/Tree pane gives way, open
+  // question 7's default).
+  const handlePreviewFile = React.useCallback(target => {
+    setPreview({ key: planKey, target });
+    setDock(_dockOpenFile);
+  }, [planKey]);
+  // × / Esc on the preview: clear the target, and collapse the dock when
+  // the File tab is the one shown (phase-2 plan's preferred close UX).
+  const closePreview = React.useCallback(() => {
+    setPreview(null);
+    setDock(d => (d.tab === "file" ? _dockClose(d) : d));
+  }, []);
   const previewToGit = React.useCallback(path => { setPreview(null); handleOpenFile(path); }, [handleOpenFile]);
   // The git browser and the files panel refetch when this count rises;
   // counted only while one is open, and handed over as a number so
@@ -512,11 +527,9 @@ function App() {
   // column currently has anything to show, so interval plugins do not
   // stall while it is hidden.
   const railVisible = t.layout !== "focus" && !!activeProject.id;
-  // The Session activity view hosts the per-tab cards the rail used to
+  // The Session dock tab hosts the per-tab cards the rail used to
   // (decisions 12): the PR hook may read while either is on screen.
-  // Session tools move to the tool dock in phase 2; until then the Session
-  // activity view is gone, so PR Auto-fix visibility follows rail only.
-  const sessionViewShown = false;
+  const sessionViewShown = _dockIsOpen(dock) && dock.tab === "session";
   const widgets = useWidgets({
     bridge, activeSessionId: activeProject.id, activeProjectPath: activeProject.path ?? null, railVisible, tweaks: t, setTweak,
   });
@@ -1044,16 +1057,39 @@ function App() {
   const browserFull = side === "browser" && browser.fullView;
   const splitShown = showSplit && !browserFull;
   // The right column shows only the widget plugin cards and vanishes when
-  // there is nothing to show (workspace layout, phase 3).
+  // there is nothing to show (workspace layout, phase 3). While the Session
+  // dock is open the cards render under the SessionView in the pane — no
+  // second right column (decisions 17, phase-2 plan 2.3).
   const widgetUI = !!widgets.fatal || widgets.configErrors.length > 0 ||
     widgets.approvals.length > 0 || widgets.cards.length > 0;
   const sideRail = side === "tree" || side === "files" ? side
-    : side !== "browser" && showRail && widgetUI ? "rail" : null;
+    : side !== "browser" && showRail && widgetUI && !sessionViewShown ? "rail" : null;
   const panes = usePaneWidths({
     tweaks: t, setTweak, workspaceRef,
-    open: [sidePanelOpen && "sidebar", splitShown && "split", sideRail].filter(Boolean),
+    open: [sidePanelOpen && "sidebar", splitShown && "split", sideRail,
+      _dockIsOpen(dock) && "dock"].filter(Boolean),
     reserve: side === "browser" && !browserFull ? _AL_BROWSER_MIN : 0,
   });
+  // The plugin widget cards, in the stage rail or under the SessionView in
+  // the Session dock pane — one home, never both (phase-2 plan 2.3).
+  const widgetCards = (
+    <>
+      {widgets.fatal && <WidgetErrorCard title="widgets.json" error={widgets.fatal} />}
+      {widgets.configErrors.map((e, i) => <WidgetErrorCard key={i} title="widgets.json" error={e} />)}
+      {widgets.approvals.map(a => (
+        <WidgetBoundary key={`approve:${a.id}`} title={a.title}>
+          <WidgetApprovalCard title={a.title} command={a.command} changed={a.changed}
+            onApprove={() => widgets.approve(a.id)} />
+        </WidgetBoundary>
+      ))}
+      {widgets.cards.map(c => (
+        <WidgetBoundary key={c.id} title={c.title} resetKey={c.resetKey}>
+          <WidgetCard title={c.title} run={c.run} attention={c.attention} onAck={() => widgets.acknowledge(c.id)}
+            onRefresh={() => widgets.refresh(c.id)} onInsert={handleWidgetInsert} insertCfg={c.insert} />
+        </WidgetBoundary>
+      ))}
+    </>
+  );
 
   // The widget switch keys the Settings Rail section renders: badges and
   // resets count only these (a removed plugin's stored key has no row).
@@ -1295,20 +1331,7 @@ function App() {
                 />
               ) : showRail && widgetUI && (
                 <aside className="rail" aria-label={OMP_TR("rail widgets")}>
-                  {widgets.fatal && <WidgetErrorCard title="widgets.json" error={widgets.fatal} />}
-                  {widgets.configErrors.map((e, i) => <WidgetErrorCard key={i} title="widgets.json" error={e} />)}
-                  {widgets.approvals.map(a => (
-                    <WidgetBoundary key={`approve:${a.id}`} title={a.title}>
-                      <WidgetApprovalCard title={a.title} command={a.command} changed={a.changed}
-                        onApprove={() => widgets.approve(a.id)} />
-                    </WidgetBoundary>
-                  ))}
-                  {widgets.cards.map(c => (
-                    <WidgetBoundary key={c.id} title={c.title} resetKey={c.resetKey}>
-                      <WidgetCard title={c.title} run={c.run} attention={c.attention} onAck={() => widgets.acknowledge(c.id)}
-                        onRefresh={() => widgets.refresh(c.id)} onInsert={handleWidgetInsert} insertCfg={c.insert} />
-                    </WidgetBoundary>
-                  ))}
+                  {widgetCards}
                 </aside>
               )}
               {settingsCtx && (
@@ -1318,6 +1341,48 @@ function App() {
               )}
             </div>
             </div>
+            <ToolDock
+              tab={dock.tab}
+              open={_dockIsOpen(dock)}
+              label={dock.tab === "file" ? "File" : "Session"}
+              head={dock.tab === "session"}
+              onSelect={dockSelect}
+              onClose={dock.tab === "file" ? closePreview : dockClose}
+              resize={panes.handle("dock")}
+            >
+              {dock.tab === "file" ? (
+                preview && preview.key === planKey ? (
+                  <FilePreview target={preview.target} onClose={closePreview}
+                    onOpenGit={previewToGit} onComment={previewToFiles} />
+                ) : (
+                  <div className="dock-pane-stub">{OMP_TR("Open a file from the chat or the explorer.")}</div>
+                )
+              ) : (
+                <>
+                  <div className="dock-session">
+                    <SessionView
+                      tabId={planKey}
+                      show={{ context: t.showContext ?? true, radar: t.showRadar ?? true, subagents: t.showSubagents ?? true, minimap: t.showMinimap ?? true, changes: t.showChanges ?? true }}
+                      folds={svFolds} onToggleFold={handleToggleSvFold}
+                      ctx={liveCtx} sparklineValues={sparkline} activity={activity}
+                      subagents={subagentList}
+                      subagentPaneOpen={showSplit}
+                      onOpenSubagent={subagentUi.open}
+                      onToggleSubagentPane={subagentUi.togglePane}
+                      messages={messages}
+                      hoveredMsgIdx={hoveredMsgIdx}
+                      onMinimapHover={setHoveredMsgIdx}
+                      onMinimapClick={handleMinimapClick}
+                      prAutomation={prAutomation} prAvailable={!!activeProject.path && !!bridge?.isConnected}
+                      bridge={bridge}
+                      extCards={extCards.filter(c => t[c.tweak] !== false)}
+                      onWidgetInsert={handleWidgetInsert}
+                    />
+                  </div>
+                  {widgetUI && <div className="dock-widgets">{widgetCards}</div>}
+                </>
+              )}
+            </ToolDock>
           </div>
           {/* Full window width under the workspace: no side column (rail,
               tree, browser panel, subagent split) ever narrows it. */}

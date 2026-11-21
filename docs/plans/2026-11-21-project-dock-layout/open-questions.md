@@ -12,10 +12,10 @@ Choices still free **inside** [`decisions.md`](./decisions.md). Resolve at phase
 
 ## Phase 2 — Tool dock
 
-6. **Dock remember last tab** — window-global last dock id vs per session tab?
-7. **Auto-open File dock** — on every preview trigger (yes, locked intent) — also switch away from Session/Tree if they were open? (Default: yes, select File tab.)
-8. **Empty File tab** — show stub “open a file from chat / explorer” vs keep dock collapsed until a target exists?
-9. **Widgets** — always under Session dock section (as today’s SessionView) vs only when Session tab selected (same)? Confirm no second right column.
+6. **Dock remember last tab** — window-global last dock id vs per session tab? (Implemented: **window-global** `{ tab, open }` in `app-live.jsx`; no per-tab memory.)
+7. **Auto-open File dock** — on every preview trigger (yes, locked intent) — also switch away from Session/Tree if they were open? **Resolved: yes** — `OMP_TOOL_DOCK.openFile` always selects the File tab and opens the pane, whatever was open.
+8. **Empty File tab** — **Resolved: stub** — "Open a file from the chat or the explorer." (`.dock-pane-stub`); the pane always shows for the File tab, so the tab click is never a no-op and handoffs (git browser / files panel) leave a stub rather than an empty pane.
+9. **Widgets** — **Resolved: plugin widget cards render under the SessionView in the Session dock pane**; the stage rail column is suppressed while the Session dock is open (`sideRail` in `app-live.jsx`), so there is never a second right column.
 
 ## Phase 3 — Members / cleanup
 

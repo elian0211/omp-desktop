@@ -2,11 +2,13 @@
    chat/file-preview.jsx — quick look at a project file (issue #39): a read
    card's target or a file link in the agent's text. Text highlighted, the
    read lines tinted and scrolled to; images shown whole. Read-only, a
-   snapshot taken when it opens.
+   snapshot taken when it opens. Renders as the tool dock's File pane
+   (project-dock-layout phase 2): no modal scrim, the chat beside it
+   stays usable.
 
    Props: { target, onClose, onOpenGit, onComment }
      target    — { path, range } (app/file-preview.js readTarget/linkTarget)
-     onClose   — Esc, the close button, a click on the scrim
+     onClose   — Esc, the close button in the panel head
      onOpenGit — path → the git browser on that file (the preview closes)
      onComment — (path, range) → the files panel on that file and range
                  (the preview closes); text files only
@@ -14,7 +16,7 @@
    Also exports FILE_STATES and FileState (the non-text states), which the
    files panel (design/files/) shows too.
    ═════════════════════════════════════════════════════════════════════ */
-const { Icon: _FP_Icon, CopyButton: _FP_Copy, useModalLayer: _FP_useModalLayer } = window;
+const { Icon: _FP_Icon, CopyButton: _FP_Copy } = window;
 const {
   highlightLines: _FP_highlight, clipLines: _FP_clip,
   inRange: _FP_inRange, MAX_LINES: _FP_MAX_LINES, MAX_LINE_CHARS: _FP_MAX_LINE_CHARS,
@@ -97,10 +99,6 @@ function FileState({ title, sub }) {
 function FilePreview({ target, onClose, onOpenGit, onComment }) {
   // null while loading; then the bridge's `{ok, value | error}`.
   const [res, setRes] = React.useState(null);
-  const scrimRef = React.useRef(null);
-  // Whether the press began on the scrim: a drag-select out of the code
-  // that ends there still clicks the scrim, and must not close the preview.
-  const downOnScrim = React.useRef(false);
 
   React.useEffect(() => {
     let live = true;
@@ -123,9 +121,6 @@ function FilePreview({ target, onClose, onOpenGit, onComment }) {
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
   }, [onClose]);
-
-  // Modal, as the image lightbox: the app behind is inert, focus returns.
-  _FP_useModalLayer(scrimRef);
 
   const value = res?.ok ? res.value : null;
   // Rust's project-relative path once known, the link's or card's before.
@@ -153,22 +148,15 @@ function FilePreview({ target, onClose, onOpenGit, onComment }) {
     );
   } else body = <_FP_TextBody path={shownPath} text={clip.text} range={range} />;
 
-  return ReactDOM.createPortal(
+  // Docked pane (project-dock-layout phase 2): the panel is the tool
+  // dock's File pane body — no scrim, the chat beside it stays usable.
+  return (
     <div
-      ref={scrimRef}
-      className="fp-scrim"
-      role="dialog"
-      aria-modal="true"
+      className="fp-panel"
+      role="region"
       aria-label={OMP_TR("Preview of {path}", { path: shownPath })}
-      tabIndex={-1}
-      onMouseDown={(e) => { downOnScrim.current = e.target === e.currentTarget; }}
-      onClick={(e) => {
-        if (downOnScrim.current && e.target === e.currentTarget) onClose();
-        downOnScrim.current = false;
-      }}
     >
-      <div className="fp-panel">
-        <div className="fp-head">
+      <div className="fp-head">
           <_FP_Icon name={value?.kind === "Image" ? "image" : "file"} size={13} color="var(--cyan)" />
           <span className="fp-crumb mono" title={shownPath}>
             {shownPath.slice(0, slash)}<b>{shownPath.slice(slash)}</b>
@@ -201,9 +189,7 @@ function FilePreview({ target, onClose, onOpenGit, onComment }) {
           </button>
         </div>
         <div className="fp-body">{body}</div>
-      </div>
-    </div>,
-    document.body,
+    </div>
   );
 }
 
