@@ -39,8 +39,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The stage's widget rail holds only plugin cards and **disappears when there is nothing to show** — no empty aside, no resize handle. While the Session dock is open those cards sit under SessionView instead (see tool-dock notes above). Widget plugins keep their schedule: "rail visible" means the layout is not focus and a tab is open, so an empty/hidden widget column no longer stalls interval plugins.
 - The git browser and the files panel have an "all files" toggle that adds the ignored paths to the project tree: ignored files are marked `×`, new (untracked) files `+`, and an ignored directory collapses to one `×` row instead of being hidden. Ignored paths never count as changes (the "N changed" toggle and counts ignore them) and drop first when the tree is truncated.
 - The files detail panel shows the picked file only — browsing belongs to the project side's Explorer fold. The toolbar's files button is gone (the chord `Ctrl+Shift+M` still opens the detail on the selected file) and the panel's bar has a close button beside the copy button. The file preview and the files panel no longer render a big file all at once: rows build in chunks as you scroll (the 20 000-line cap was a render guard — the text was always read in full), and the "已截断" chip now means "keep scrolling", not "this is all". Their code surfaces follow the theme now: background, line-number gutter and syntax tokens use theme variables (each theme ships its own `--syntax-*` palette) instead of a fixed dark block with one-dark token colours that clashed on the daylight theme.
-- The browser panel has its own close button again, at the right end of its control bar. The toolbar's browser toggle still closes it too.
 - A tool-approval prompt card follows the interface language: its "Allow tool: …" head and the Approve/Deny buttons translate display-only (the answer still carries omp's exact option label), and the ask dialog's timeout notes translate too. The detail lines (command, path, content preview) stay as omp wrote them. Its four buttons (Approve/Deny and the two remember offers) sit on one wrapping line instead of two rows.
+
+## [0.15.1] - 2026-11-20
+
+### Changed
+
+- Choice prompts show their options as full-width rows in a card, styled like the ask dialog, instead of rounded pill buttons. They are omp's `select` prompts: tool approvals, extension pickers, and the choice fields of the `ask` tool's forms, which omp sends over RPC one field at a time since 18.18.3 (text fields still come through `input`/`editor`). This applies on the desktop and on the remote phone view. A click still answers at once. Single-choice rows have radio marks; checkbox fields show omp's checked boxes, and their "Done selecting" row is a plain action. On the desktop, the picked row stays highlighted once answered and the others fade.
+- OMP Desktop now requires omp 18.20.0 or newer, the first release that sends the checked state of checkbox prompts. A tab started against an older omp does not start; its note names both versions.
+- The browser panel has its own close button again, at the right end of its control bar. The toolbar's browser toggle still closes it too.
 
 ## [0.15.0] - 2026-11-14
 
