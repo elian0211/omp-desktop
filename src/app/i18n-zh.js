@@ -132,8 +132,8 @@ window.OMP_I18N.add("zh", {
   " prompts": " 条",
 
   // ── Settings → Rail ──
-  "Rail": "侧边栏",
-  "The cards in the rail beside the chat, including widget plugins and extension widgets.": "聊天旁侧边栏中的卡片，包括小组件插件和扩展小组件。",
+  "Session tools": "会话工具",
+  "The cards in the Session tools dock pane, including widget plugins and extension widgets.": "会话工具坞面板中的卡片，包括小组件插件和扩展小组件。",
   "Built-in cards": "内置卡片",
   "Context gauge": "上下文占用",
   "How full the model's context window is.": "模型上下文窗口的已用比例。",
@@ -342,6 +342,11 @@ window.OMP_I18N.add("zh", {
   "Projects": "项目",
   "Project side": "项目侧栏",
   "Tool dock": "工具坞",
+  "Toggle tool dock": "切换工具坞",
+  "Dock: file preview": "工具坞：文件预览",
+  "Dock: session tools": "工具坞：会话工具",
+  "Dock: conversation tree": "工具坞：对话树",
+  "Dock: usage": "工具坞：用量",
   "File": "文件",
   "Tree": "对话树",
   "Usage": "用量",

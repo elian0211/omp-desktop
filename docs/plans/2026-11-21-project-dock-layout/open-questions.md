@@ -5,10 +5,10 @@ Choices still free **inside** [`decisions.md`](./decisions.md). Resolve at phase
 ## Phase 1 — Project shell
 
 1. **Recents placement** — ~~strip overflow menu vs Sessions fold footer vs empty CTA?~~ **Resolved: strip `+` menu** (recents + "open folder…" as one popover; `ProjectStrip`, always reachable). Empty CTA keeps plain "Open a workspace".
-2. **Tab strip when project has one session** — still show a thin tab, or hide until ≥2 open?
-3. **Closed but “known” sessions** — Sessions fold lists only **open tabs** in that project, or also resume candidates from history for that folder? (Default lean: open tabs only; History modal stays for resume.)
-4. **Project strip order** — match `groupTabs` / registry project order; drag-reorder on the strip in phase 1 or later?
-5. **Focus layout** — hide strip + side + dock, or keep strip only?
+2. **Tab strip when project has one session** — **Resolved: always show** (the strip lists `membersNewestFirst` regardless of count; a lone tab keeps its close/rename affordances).
+3. **Closed but "known" sessions** — **Resolved: open tabs only**; the History modal stays the resume surface.
+4. **Project strip order** — **Resolved: `groupTabs` registry order; no strip drag-reorder** (member drag within a project lives in the Sessions fold and the thin tab strip).
+5. **Focus layout** — **Resolved: the `layout: focus` tweak suppresses only the stage's widget rail**; strip, project side and dock panes stay (they are user-toggled chrome, each independently collapsible).
 
 ## Phase 2 — Tool dock
 
@@ -21,13 +21,13 @@ Choices still free **inside** [`decisions.md`](./decisions.md). Resolve at phase
 
 10. **Usage in dock** — **Resolved: the full `UsageStatsPanel`**, docked (`docked` prop drops the scrim; the panel head keeps refresh + close).
 11. **Tree refresh control** — **Resolved: dock header** (a refresh button in the dock pane head when the Tree tab is open); the toolbar's tree cluster is gone.
-12. **`side === "files"` detail** vs File dock — exclusive always, or allow both briefly?
-13. **Git dock later** — track as follow-up issue; not blocking v1.
+12. **`side === "files"` detail** vs File dock — **Resolved: not exclusive**; the files detail stays a stage column (`side === "files"`), the File preview a dock pane, and both can be open at once (decision 22's "prefer mutual exclusion or handoff" is served by the existing preview→files handoff button).
+13. **Git dock later** — still a follow-up, not blocking v1 (decisions 18/3.6 unchanged).
 
 ## Phase 4
 
-14. **Tweak migration** — map `sidebar` → project side visibility; retire `OMP_ACTIVITY` defaults; rename Settings “Rail” copy to “Session dock” / “Tool dock”?
-15. **Keymap** — remap `desktop.sidebar.toggle` to project side; new chords for dock tabs vs reuse activity chords?
+14. **Tweak migration** — **Resolved:** `sidebar` already maps to project side visibility (phase 1); `OMP_ACTIVITY` deleted with `app/activity.js` (no stored defaults to migrate — the activity view id was never a tweak); Settings → Rail renamed **Session tools**; `treeWidth` removed from `TWEAK_DEFAULTS`/schema (a stored value is inert), `dockWidth` added.
+15. **Keymap** — **Resolved:** `desktop.sidebar.toggle` was retargeted to the project side in phase 1; five new chords added (`desktop.dock.toggle`, `desktop.dock.file/.session/.tree/.usage`, no defaults, user-assignable; Rust `ACTION_IDS` kept in sync). No activity-view chords existed to reuse.
 
 ## Explicitly closed (this redesign)
 

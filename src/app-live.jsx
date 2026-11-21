@@ -988,6 +988,11 @@ function App() {
     "desktop.shortcuts.open":  () => openSettings("shortcuts"),
     "desktop.settings.open":   () => openSettings(),
     "desktop.sidebar.toggle":  toggleSidePanel,
+    "desktop.dock.toggle":     () => setDock(d => (_dockIsOpen(d) ? _dockClose(d) : _dockSelect(d, d.tab ?? "file"))),
+    "desktop.dock.file":       () => dockSelect("file"),
+    "desktop.dock.session":    () => dockSelect("session"),
+    "desktop.dock.tree":       () => dockSelect("tree"),
+    "desktop.dock.usage":      () => dockSelect("usage"),
     "desktop.tab.new":         openWorkspaceBrowse,
     // The settings tab, when it is the one shown, closes itself; it is the
     // last stop of next/prev (OMP_SETTINGS_TAB.cycle).

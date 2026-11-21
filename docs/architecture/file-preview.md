@@ -1,6 +1,6 @@
 # File preview (issue #39)
 
-A read-only look at one project file: a read card's target or a file link in the agent's markdown. Text is highlighted with the read lines tinted. Images show whole. Sites are out of scope: http(s) links keep their routing (localhost to the browser panel, the rest to the system browser through `navigation_guard.rs`).
+A read-only look at one project file: a read card's target or a file link in the agent's markdown. Text is highlighted with the read lines tinted. Images show whole. Sites are out of scope: http(s) links keep their routing (localhost to the browser panel, the rest to the system browser through `navigation_guard.rs`). Since the 2026-11-21 project-dock layout the preview renders **docked in the tool dock's File pane** — no modal scrim, the chat beside it stays usable; the old modal/lightbox presentation is retired.
 
 ## Entry points
 
@@ -13,7 +13,7 @@ A read-only look at one project file: a read card's target or a file link in the
 |preview "Open in git browser"|the git browser on Rust's project-relative path|
 |preview "Comment in files panel" (text files)|the files panel on that file, the preview's range picked|
 
-`app-live.jsx` holds `preview = { key, target }`. `key` is the tab the preview was opened in, and the modal renders only while that tab is active. A new path refetches; a new range on the same path only scrolls. The markdown containers' delegated click (`MarkdownLinkContext`, `ui/markdown.jsx`) is `handleChatLinkClick`: `linkClick(e, root)` claims a primary click on a project file link (the preview, with Ctrl/⌘ the git browser, with Alt the files panel), and anything else goes on to the browser panel's `onChatClick`. Without that handler a relative link navigates the webview, and `navigation_guard.rs` blocks it silently.
+`app-live.jsx` holds `preview = { key, target }`. `key` is the tab the preview was opened in, and the pane shows it only while that tab is active (another tab shows the "open a file" stub). Opening a preview also selects the File dock tab and opens the pane (`OMP_TOOL_DOCK.openFile` — a Session/Tree pane gives way); ×/Esc clears the target and collapses the pane when the File tab was the one shown, a handoff to the git browser or the files panel leaves the pane on its stub. A new path refetches; a new range on the same path only scrolls. The markdown containers' delegated click (`MarkdownLinkContext`, `ui/markdown.jsx`) is `handleChatLinkClick`: `linkClick(e, root)` claims a primary click on a project file link (the preview, with Ctrl/⌘ the git browser, with Alt the files panel), and anything else goes on to the browser panel's `onChatClick`. Without that handler a relative link navigates the webview, and `navigation_guard.rs` blocks it silently.
 
 ## Targets (`app/file-preview.js`)
 
@@ -38,7 +38,7 @@ A range is `{ from, to }`, 1-based and inclusive; one line and an open-ended sta
 - `highlightLines` (`app/file-preview.js`, shared with the files panel) runs hljs on files up to `HIGHLIGHT_MAX_CHARS` (256 KiB) when `language()` finds a registered language. Larger files, or files in an unknown language, show as escaped plain text. `splitHighlighted` cuts hljs output into lines, closing open spans at the end of each line and reopening them on the next, so a block comment keeps its colour across lines.
 - The code sits on a fixed dark surface in every theme, like chat code blocks: the hljs theme's colours are dark-theme colours.
 - A range of several lines is tinted (`is-read`); a single line or an open-ended start (`:50`) is marked as the target (`is-target`). The rows are a memoised component, so a re-render of the head (the copy button's flash) does not rebuild them. On load the view scrolls so the range starts four lines from the top.
-- The modal follows the lightbox: it renders in a portal on `<body>`, `useModalLayer` (`chat/image-lightbox.jsx`) makes `#root` `inert` and returns focus to the opener on close, and Esc is handled in the capture phase with `preventDefault` (the global keymap skips handled events). The scrim closes it only for a press that began on the scrim, so a drag-select out of the code does not.
+- The panel renders as the File pane's body (`design/tool-dock.jsx` hosts it; `.dock-pane .fp-panel` fills the pane). Esc is handled in the capture phase with `preventDefault` (the global keymap skips handled events) and closes the preview; the pane is a `role="region"`, there is no scrim and nothing inert.
 - The `Outside` kind shows the "Outside the project" state and no "Open in git browser"; an `Err` shows its text.
 
 ## Card data (`adapter.js`)

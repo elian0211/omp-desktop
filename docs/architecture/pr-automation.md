@@ -1,6 +1,6 @@
 # Changes card and Auto-fix
 
-The **Changes** card (the open GitHub PR for the project's checked-out branch, its CI, and an opt-in **Auto-fix** that prompts the agent with new failed checks and unresolved review threads) lives in the **Session activity view** of the side panel (`design/side-views/session-view.jsx`); the right rail keeps only the widget plugin cards.
+The **Changes** card (the open GitHub PR for the project's checked-out branch, its CI, and an opt-in **Auto-fix** that prompts the agent with new failed checks and unresolved review threads) lives in the **Session tools pane of the tool dock** (`design/side-views/session-view.jsx` mounted as the dock's Session tab); the stage's widget rail keeps only the plugin widget cards, and is hidden while the Session dock is open.
 
 |Layer|Code|
 |---|---|
@@ -26,7 +26,7 @@ When reads run:
 
 - **Events**, with Auto-fix on or off: tab activation, checked-out branch changes, run-state changes (including turn completion), returning window focus, document visibility, and focus entering the conversation from another element. Focus moving within the conversation does not, nor does focus coming back from `<body>` (no `relatedTarget`, e.g. after clicking transcript text): every click would start a GitHub read. There is no manual Refresh button.
 - **Periodic:** an enabled Auto-fix tab re-reads every 30 s. Any tab whose PR has a queued or running check re-reads every 15 s, with Auto-fix off too, as long as its last read succeeded; once every check has finished, or a read fails, reads are event-driven again.
-- **Visibility:** while the card cannot be seen — the Session view not shown (the side panel collapsed or on another view), focus layout, the tree or browser panel in the stage, or a hidden window — a tab with Auto-fix off reads nothing at all, and reads once when it becomes visible (`railVisible: railVisible || sessionViewShown` in `app-live.jsx`). Auto-fix tabs keep polling. Same rule as rail widgets.
+- **Visibility:** while the card cannot be seen — the Session dock pane not shown, focus layout, the browser panel or files panel in the stage, or a hidden window — a tab with Auto-fix off reads nothing at all, and reads once when it becomes visible (`railVisible: railVisible || sessionViewShown`, where `sessionViewShown` is the dock open on its Session tab, in `app-live.jsx`). Auto-fix tabs keep polling. Same rule as rail widgets.
 
 Requests are single-flight and coalesced, and results from a previous tab/project/branch or enabled incarnation are discarded. While a read started for an earlier tab, branch or conversation is still in flight, the current card shows "Updating…", never "No open pull request". A refresh that arrives while a fix prompt is being revalidated and sent waits for that send instead of voiding it, then reads. A successful no-PR result removes the row after merge/closure; a read failure retains the last snapshot with an explicit error instead of pretending there is no PR. This is automatic checking, not a GitHub push subscription: no GitHub App, webhook server or tunnel.
 

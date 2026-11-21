@@ -26,7 +26,7 @@
     // explicitly configured action (including an explicit `[]` disable)
     // claims its chords before any action still on its default does,
     // regardless of where either row sits here. See `resolve`'s doc comment.
-    // Must match the plan §5 table row-for-row and Rust ACTION_IDS.
+    // Must match Rust ACTION_IDS row-for-row (src-tauri/src/keybindings/mod.rs).
     { id: "app.interrupt",           label: "Interrupt turn",          group: "Session", scope: "global",   defaultKeys: ["escape"] },
     { id: "app.thinking.cycle",      label: "Cycle thinking level",    group: "Agent",   scope: "global",   defaultKeys: ["shift+tab"] },
     { id: "app.model.cycleForward",  label: "Cycle model forward",     group: "Agent",   scope: "global",   defaultKeys: ["ctrl+p"] },
@@ -41,6 +41,11 @@
     { id: "desktop.shortcuts.open",  label: "Keyboard shortcuts",      group: "View",    scope: "global",   defaultKeys: ["ctrl+/", "super+/"] },
     { id: "desktop.settings.open",   label: "Open settings",           group: "View",    scope: "global",   defaultKeys: ["ctrl+,", "super+,"] },
     { id: "desktop.sidebar.toggle",  label: "Toggle side panel",       group: "View",    scope: "global",   defaultKeys: ["ctrl+b", "super+b"] },
+    { id: "desktop.dock.toggle",     label: "Toggle tool dock",        group: "View",    scope: "global",   defaultKeys: [] },
+    { id: "desktop.dock.file",       label: "Dock: file preview",      group: "View",    scope: "global",   defaultKeys: [] },
+    { id: "desktop.dock.session",    label: "Dock: session tools",     group: "View",    scope: "global",   defaultKeys: [] },
+    { id: "desktop.dock.tree",       label: "Dock: conversation tree", group: "View",    scope: "global",   defaultKeys: [] },
+    { id: "desktop.dock.usage",      label: "Dock: usage",             group: "View",    scope: "global",   defaultKeys: [] },
     { id: "desktop.browser.toggle",  label: "Toggle browser panel",    group: "View",    scope: "global",   defaultKeys: ["ctrl+shift+b", "shift+super+b"], fromGuest: true },
     { id: "desktop.files.toggle",    label: "Toggle files panel",      group: "View",    scope: "global",   defaultKeys: ["ctrl+shift+m", "shift+super+m"], fromGuest: true },
     { id: "desktop.tab.new",         label: "New tab",                 group: "Tabs",    scope: "global",   defaultKeys: ["ctrl+t", "super+t"] },

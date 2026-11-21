@@ -1,6 +1,6 @@
 # Project strip + tool dock layout
 
-**Status:** planning · **supersedes** [`../2026-11-20-workspace-layout/`](../2026-11-20-workspace-layout/)  
+**Status:** implemented (phases 1–4, 2026-11-21) · **supersedes** [`../2026-11-20-workspace-layout/`](../2026-11-20-workspace-layout/)  
 **Date:** 2026-11-21  
 **Sketch:** Pencil canvas (layout B iterations); earlier HTML explorers under `.temp/layout-sketch-b.html` are non-normative.
 

@@ -128,7 +128,7 @@
         }),
       ] },
     ] },
-    { id: "rail", icon: "radar", title: "Rail", blurb: "The cards in the rail beside the chat, including widget plugins and extension widgets.", groups: [
+    { id: "rail", icon: "radar", title: "Session tools", blurb: "The cards in the Session tools dock pane, including widget plugins and extension widgets.", groups: [
       { name: "Built-in cards", rows: [
         tweak("showContext", "toggle", "Context gauge", "How full the model's context window is.", "tokens"),
         tweak("showRadar", "toggle", "Agent radar", "What the agent is doing right now.", "activity"),
