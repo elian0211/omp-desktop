@@ -74,9 +74,10 @@ function ProjectStrip({
             profileLabel?.(group.profile),
           ].filter(Boolean).join("\n");
           const abbr = _psAbbr(appearance?.label || group.name, 2);
-          // A picked accent is used at full strength with the ink that reads
-          // on it; the default keeps the muted mix with its own colours.
-          const style = appearance?.accent
+          // A picked colour (the modal's `icon`, or the Settings accent) is
+          // used at full strength with the ink that reads on it; the default
+          // keeps the muted mix with its own colours.
+          const style = appearance?.icon || appearance?.accent
             ? {
               "--ps-accent": accent,
               "--ps-bg": accent,
