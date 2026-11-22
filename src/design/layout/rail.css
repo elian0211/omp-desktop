@@ -273,13 +273,19 @@
 }
 /* The hovered cell's enlargement: absolutely positioned in `.minimap`
    (non-scrolling), sized and placed from the cell's measured rect, above
-   everything; transparent to the pointer, so hover stays on the cell. */
+   everything; transparent to the pointer, so hover stays on the cell. The
+   plate is the grid's own background, opaque — the cell colour is a
+   translucent ink on top of it, so grid lines never read through. */
 .minimap-zoom {
   position: absolute; z-index: 3;
   border-radius: 4px; pointer-events: none;
   outline: 1px solid var(--fg-2);
+  background: var(--bg-input);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45), 0 0 8px rgba(255, 255, 255, 0.14);
   animation: mmZoomIn 80ms ease;
 }
+.minimap-zoom-ink { position: absolute; inset: 0; }
 @keyframes mmZoomIn {
   from { transform: scale(0.75); }
   to   { transform: scale(1); }

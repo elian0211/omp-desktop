@@ -239,7 +239,7 @@ function SessionMinimap({ messages, hoveredIdx, onHover, onClick }) {
     if (!el || !wrap || !el.getBoundingClientRect().width) { setZoom(null); return; }
     const c = el.getBoundingClientRect();
     const w = wrap.getBoundingClientRect();
-    const size = c.width * 1.6;
+    const size = c.width * 1.3;
     setZoom({
       left: c.left - w.left + c.width / 2 - size / 2,
       top: c.top - w.top + c.height / 2 - size / 2,
@@ -326,8 +326,12 @@ function SessionMinimap({ messages, hoveredIdx, onHover, onClick }) {
       </div>
       {zoom && (
         <div className="minimap-zoom" aria-hidden="true"
-          style={{ left: zoom.left, top: zoom.top, width: zoom.size, height: zoom.size,
-            background: zoom.background, opacity: zoom.opacity }} />
+          style={{ left: zoom.left, top: zoom.top, width: zoom.size, height: zoom.size }}>
+          {/* The cell's colour rides on an opaque plate (the grid's own
+              background): the cell's log-scaled opacity must not let the
+              grid lines show through the enlargement. */}
+          <span className="minimap-zoom-ink" style={{ background: zoom.background, opacity: zoom.opacity }} />
+        </div>
       )}
       <div className="minimap-legend">
         <span className="minimap-legend-item"><i style={{ background: "var(--fg-3)" }} />{OMP_TR("you")}</span>

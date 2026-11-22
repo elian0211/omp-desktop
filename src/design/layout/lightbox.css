@@ -12,10 +12,15 @@
 .user-image.is-lifted { visibility: hidden; }
 
 .lightbox {
-  position: fixed; inset: 0;
+  /* Anchored inside .window (the portal target): starts below the title
+     bar like every overlay, and covers only the window, never the
+     viewport outside it. Nearly opaque — the chat underneath, the lifted
+     thumbnail included, must read as covered, or the enlargement looks
+     like a translucent card floating over it instead of a zoom. */
+  position: absolute; top: 39px; left: 0; right: 0; bottom: 0;
   z-index: 200;
-  background: color-mix(in oklab, var(--bg-app) 82%, transparent);
-  backdrop-filter: blur(12px);
+  background: color-mix(in oklab, var(--bg-app) 97%, transparent);
+  backdrop-filter: blur(6px);
   cursor: zoom-out;
   outline: none;
   animation: lbScrimIn 220ms var(--ease-out);
@@ -27,7 +32,7 @@
 /* left/top/width/height come from OMP_LIGHTBOX.fitRect; the FLIP transform
    (app/lightbox.js flipTransform) assumes a top-left origin. */
 .lightbox-img {
-  position: fixed;
+  position: absolute;
   transform-origin: 0 0;
   border-radius: 10px;
   border: 1px solid var(--line-bright);
@@ -38,7 +43,7 @@
 .lightbox-img.is-swap { animation: lbFadeIn 180ms var(--ease-out); }
 
 .lightbox-btn {
-  position: fixed;
+  position: absolute;
   display: grid; place-items: center;
   width: 36px; height: 36px; padding: 0;
   border-radius: 50%;
@@ -57,7 +62,7 @@
 .lightbox-prev svg { transform: scaleX(-1); }
 .lightbox-next { right: 18px; }
 .lightbox-count {
-  position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
   font-size: var(--d-text-xs); color: var(--fg-3);
   pointer-events: none;
   animation: lbFadeIn 220ms var(--ease-out);

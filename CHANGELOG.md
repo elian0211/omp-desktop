@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The image lightbox is anchored inside the window like the other overlays: its scrim starts below the title bar and covers only the window, and the enlarged image, buttons and counter position in that space (flip animations to/from the thumbnail included). Its backdrop stays nearly opaque (97% wash, 6px blur).
 - Modal scrims no longer cover the window's title bar and wash out less: the overlays (⌘K bridge, update/setup/confirm/new-project/history panels, the git browser, the plan kanban) render inside the window and start below it, and their backdrop drops to a 40–45% wash with a 4px blur (was 70–75% / 10px).
 - The new/edit-project modal's custom colour field is a native colour picker now (one swatch beside the palette, opening the OS picker) instead of a hex text field; the "Default" swatch still clears it, and the picker dims while no colour is set. The field is the **icon colour** (renamed from 强调色/Accent): it stores the display-only `icon` override in `projectAppearance` and tints only the project strip's icon — picking a colour no longer rethemes the rendered tab (that stays Settings → Appearance's theme/accent override, which the strip still falls back to).
 - The Explorer foot's three file tabs no longer wrap: the project side's minimum width rises to 210px, the tabs (项目 / 仓库 / 变更) share the foot's full width on one line, and the labels are shortened.

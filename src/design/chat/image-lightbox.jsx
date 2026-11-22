@@ -25,7 +25,13 @@ function _LB_reducedMotion() {
 }
 
 function _LB_viewport() {
-  return { w: window.innerWidth, h: window.innerHeight };
+  // The lightbox's own space: the window's inner box below the title bar —
+  // the scrim anchors there (absolute, top 39px = .chrome 38px + 1px
+  // border), inside the window's 1px borders.
+  const host = document.querySelector(".window");
+  if (!host) return { w: window.innerWidth, h: window.innerHeight };
+  const r = host.getBoundingClientRect();
+  return { w: r.width - 2, h: r.height - 41 };
 }
 
 // Modal: the app behind (#root — a modal renders in a portal on <body>) is
@@ -84,7 +90,7 @@ function ImageLightbox({ images, index, onIndex, onClose, thumbFor }) {
     const thumb = thumbFor(index);
     if (!thumb || _LB_reducedMotion()) return;
     imgRef.current.animate(
-      [{ transform: _LB_flipTransform(thumb.getBoundingClientRect(), rect) }, { transform: "none" }],
+      [{ transform: _LB_flipTransform(thumbRect(thumb), rect) }, { transform: "none" }],
       { duration: _LB_OPEN_MS, easing: _LB_EASE },
     );
   });
@@ -103,7 +109,7 @@ function ImageLightbox({ images, index, onIndex, onClose, thumbFor }) {
     const start = getComputedStyle(img).transform;
     img.getAnimations().forEach((a) => a.cancel());
     const anim = img.animate(
-      [{ transform: start }, { transform: _LB_flipTransform(thumb.getBoundingClientRect(), rect) }],
+      [{ transform: start }, { transform: _LB_flipTransform(thumbRect(thumb), rect) }],
       { duration: _LB_CLOSE_MS, easing: _LB_EASE, fill: "forwards" },
     );
     anim.onfinish = onClose;
@@ -132,11 +138,27 @@ function ImageLightbox({ images, index, onIndex, onClose, thumbFor }) {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [close, step]);
 
-  React.useEffect(() => {
-    const onResize = () => setView(_LB_viewport());
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+  // The view is the scrim's own box (the window's inner area below the
+  // title bar). Measured via a ResizeObserver: on the very first commit the
+  // portal may still land in <body> (.window is not in the document yet)
+  // and moves into the window on the next render — the box changes then,
+  // and the observer re-measures.
+  const measure = React.useCallback(() => {
+    const s = scrimRef.current;
+    if (!s) return;
+    const r = s.getBoundingClientRect();
+    setView({ w: r.width, h: r.height });
   }, []);
+  React.useEffect(() => {
+    const s = scrimRef.current;
+    if (!s) return undefined;
+    const measureNow = () => measure();
+    measureNow();
+    const ro = new ResizeObserver(measureNow);
+    ro.observe(s);
+    window.addEventListener("resize", measureNow);
+    return () => { ro.disconnect(); window.removeEventListener("resize", measureNow); };
+  }, [measure]);
 
   useModalLayer(scrimRef);
 
@@ -144,6 +166,15 @@ function ImageLightbox({ images, index, onIndex, onClose, thumbFor }) {
     ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
     : { visibility: "hidden" };
   const nav = (delta) => (e) => { e.stopPropagation(); step(delta); };
+  // The thumbnail's rect is viewport-based; the img and its transforms live
+  // in the scrim's space (.window below the title bar), so bring it over.
+  const thumbRect = (el) => {
+    const r = el.getBoundingClientRect();
+    const s = scrimRef.current?.getBoundingClientRect();
+    return s
+      ? { left: r.left - s.left, top: r.top - s.top, width: r.width, height: r.height }
+      : r;
+  };
 
   return ReactDOM.createPortal(
     <div
@@ -179,7 +210,9 @@ function ImageLightbox({ images, index, onIndex, onClose, thumbFor }) {
         </React.Fragment>
       )}
     </div>,
-    document.body,
+    // Inside .window: the scrim is absolute and must not cover the title
+    // bar (top 39px), like every other overlay.
+    document.querySelector(".window") ?? document.body,
   );
 }
 
