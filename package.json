@@ -66,6 +66,7 @@
     "test:transcript-merge": "node tests/test-transcript-merge.mjs",
     "test:turn-status": "node tests/test-turn-status.mjs",
     "test:updater": "node tests/test-updater.mjs",
+    "test:omp-setup": "node tests/test-omp-setup.mjs",
     "test:updater-json": "node tests/test-updater-json.mjs",
     "test:widgets": "node tests/test-widgets.mjs",
     "test:widget-examples": "node tests/test-widget-examples.mjs",

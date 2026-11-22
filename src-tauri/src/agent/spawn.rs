@@ -80,6 +80,16 @@ pub fn omp_output<S: AsRef<OsStr>>(args: &[S]) -> Result<std::process::Output, S
     Omp::locate()?.output(args)
 }
 
+/// The absolute omp path [`Omp::locate`] resolves, or `None` when there is
+/// none on the trusted PATH — the setup modal's `omp_locate` boot check.
+/// Located per call, so a freshly installed omp is found without an app
+/// restart.
+pub fn omp_binary_path() -> Option<String> {
+    Omp::locate()
+        .ok()
+        .map(|omp| omp.binary.display().to_string())
+}
+
 // ── omp version floor ───────────────────────────────────────────────────────
 
 /// Oldest omp OMP Desktop runs against: the newest release whose RPC

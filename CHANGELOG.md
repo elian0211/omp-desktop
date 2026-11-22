@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- **Setup guide when omp is missing**: if the boot check finds no `omp` binary on the trusted PATH (`omp_locate`, new), a modal explains it and offers the official install one-liner for the OS plus the npm command — each one click to copy — and an "official website" button that opens omp.sh in the default browser. "Check again" re-resolves immediately: installs take effect without restarting the app.
 ### Changed
 
 - An available update no longer gets a pill of its own: the status bar's `desktop v…` / `omp v…` button lights up instead (accent tint + dot marker), hovering rolls the label up inside the button to the new version, and clicking opens the update modal — idle it still checks for updates.

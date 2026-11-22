@@ -483,6 +483,7 @@ function App() {
   const subagentList = React.useMemo(() => window.OMP_SUBAGENTS.listAgents(subagents), [subagents]);
 
   const updater = useUpdater({ bridge, autoCheck: t.updateCheck ?? true, skipped: t.skippedUpdate, setTweak });
+  const ompSetup = useOmpSetup();
 
   // The browser panel (app/use-browser.jsx). `activeProject.id`, like the
   // widgets below, not `activeSessionId`, which keeps a closed tab's id.
@@ -1535,6 +1536,10 @@ function App() {
 
       {updater.open && (
         <UpdateModal updater={updater} busyTabs={window.OMP_UPDATER.busyTabCount(sessions)} />
+      )}
+
+      {ompSetup.open && (
+        <OmpSetupModal ompSetup={ompSetup} />
       )}
 
       {closeConfirm && (

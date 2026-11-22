@@ -1538,6 +1538,14 @@ async fn app_update_install(
     updater::install(&app, &state).await
 }
 
+/// The omp binary the trusted PATH resolves, or `None` when there is none —
+/// the setup modal's boot check. Pure filesystem lookups, no child run —
+/// see `agent::spawn::omp_binary_path`.
+#[tauri::command]
+fn omp_locate() -> Option<String> {
+    agent::spawn::omp_binary_path()
+}
+
 /// Kill every child process tree the app owns — omp sessions first, then
 /// the tabs' Chromium browsers, running widget plugins and terminal shells —
 /// on the calling thread. For the exits where managed state is never dropped
@@ -1911,6 +1919,7 @@ pub fn run() {
             model_usage_list,
             app_update_check,
             app_update_install,
+            omp_locate,
             set_close_guard,
             remote::commands::remote_status,
             remote::commands::remote_interfaces,
