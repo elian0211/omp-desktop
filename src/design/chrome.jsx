@@ -140,6 +140,32 @@ function TabBar({
 // `tabId` keys the picker, so a tab switch closes it; `branchLocked`: an
 // agent works on the folder, so the picker lists but does not switch.
 function StatusBar({ ctx, todoDone, todoTotal, onTodo, updater, branch, tabId, branchLocked, bridge }) {
+// One status-bar version button (desktop / omp). Idle: the running version,
+// click checks for updates. With an update available: the button lights up
+// (accent + dot), hovering rolls the label up inside the button to the new
+// version, and click opens the update modal — the pill it replaces
+// (layout/rail.css `.app-version`).
+function VersionButton({ up, name, checkTitle, pillTitle }) {
+  const pill = up?.pillVersion;
+  return (
+    <button className={`btn ghost app-version mono${pill ? " has-update" : ""}`}
+      onClick={pill ? up.openModal : up?.check}
+      title={pill ? pillTitle : checkTitle}>
+      {pill && <span className="dot update-dot" />}
+      <span className="version-roll">
+        <span className="version-rows">
+          <span className="version-row">{up?.version ? `${name} v${up.version}` : `${name} —`}</span>
+          {pill && (
+            <span className="version-row next">
+              <Icon name="arrowUp" size={9} />v{pill}
+            </span>
+          )}
+        </span>
+      </span>
+    </button>
+  );
+}
+
   const todoChord = hintFor("desktop.panel.todo", "");
   return (
     <div className="status">

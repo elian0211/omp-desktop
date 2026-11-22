@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- An available update no longer gets a pill of its own: the status bar's `desktop v…` / `omp v…` button lights up instead (accent tint + dot marker), hovering rolls the label up inside the button to the new version, and clicking opens the update modal — idle it still checks for updates.
 - **Settings and keymap follow the new shell** (project-dock redesign, phase 4): Settings → Rail is now **Session tools**; the Layout section's "new tabs show" default drops the retired tree column and the Column widths row lists the tool dock (`dockWidth`). Five new rebindable chords: toggle the tool dock and jump to its File / Session / Tree / Usage tabs (`desktop.dock.*`, no defaults yet — assign them in Settings → Shortcuts); `desktop.panel.stats` opens the Usage dock.
 - **Tool dock grows Tree and Usage** (project-dock redesign, phase 3): the conversation tree (with its refresh in the dock header) and the usage statistics (docked panel, no more modal scrim) join the File and Session panes. The toolbar drops its tree and usage buttons, `/tree` and the `desktop.panel.stats` chord open the dock, and the stage no longer has a tree column (the tree width tweak is retired; the Settings "new tabs show" default drops the tree option).
 - Retired the dead activity-bar chrome: `ActivityBar` / `WorkspacesView` / `app/activity.js` / the `TabGroupChip` are gone (the tab run dot moved to `design/tab-run-dot.jsx`); the VS themes tint the project strip where they tinted the activity bar.

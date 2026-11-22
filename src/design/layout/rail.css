@@ -24,20 +24,39 @@
 .status > .status-gap { flex: 1 1 0; min-width: 0; }
 .status-cell { display: inline-flex; align-items: center; gap: 5px; }
 .status-sep { color: var(--fg-5); }
-/* An available update: a pill beside the running version. */
-.btn.update-pill {
-  height: 18px; padding: 0 8px;
-  border-radius: 9px;
-  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
-  color: var(--accent);
-  font-size: var(--d-text-xs);
-}
-/* Running version; click checks for updates. xs like its neighbours —
-   `.btn` alone would bump it to sm. */
+/* Running version. xs like its neighbours — `.btn` alone would bump it to
+   sm. Idle it whispers and a click checks for updates; with an update
+   available (design/chrome.jsx `VersionButton`) it lights up: accent, a
+   dot, and hover/focus rolls the label up inside the button to the new
+   version — click then opens the update modal. The roll is an em-tall
+   window over a two-row column, so it scales with the font-size tweak. */
 .btn.app-version {
   height: 18px; padding: 0 4px;
   color: var(--fg-4);
   font-size: var(--d-text-xs);
+}
+.btn.app-version.has-update {
+  padding: 0 6px;
+  color: var(--accent);
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+  background: color-mix(in oklab, var(--accent) 8%, transparent);
+}
+.btn.app-version.has-update:hover {
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+.update-dot { flex: none; background: var(--accent); }
+/* The roll: a window exactly one line tall over a two-row column. Block
+   rows with an explicit line-height keep the mono font's tall metrics from
+   bleeding past the window edge. */
+.version-roll {
+  display: block; flex: none;
+  height: 1.45em; overflow: hidden;
+}
+.version-rows { display: block; transition: transform 140ms var(--ease-out); }
+.version-row { display: block; height: 1.45em; line-height: 1.45em; white-space: nowrap; }
+.version-row.next { display: flex; align-items: center; gap: 4px; }
+.btn.app-version.has-update:is(:hover, :focus-visible) .version-rows {
+  transform: translateY(-1.45em);
 }
 /* The project's branch; opens the picker (design/branch-menu.jsx). */
 .btn.branch-pill {
