@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- The new/edit-project modal's custom accent field is a native colour picker now (one swatch beside the palette, opening the OS picker) instead of a hex text field; the "Default" swatch still clears it, and the picker dims while no accent is set.
+- The new/edit-project modal's custom colour field is a native colour picker now (one swatch beside the palette, opening the OS picker) instead of a hex text field; the "Default" swatch still clears it, and the picker dims while no colour is set. The field is the **icon colour** (renamed from 强调色/Accent): it stores the display-only `icon` override in `projectAppearance` and tints only the project strip's icon — picking a colour no longer rethemes the rendered tab (that stays Settings → Appearance's theme/accent override, which the strip still falls back to).
 - The Explorer foot's three file tabs no longer wrap: the project side's minimum width rises to 210px, the tabs (项目 / 仓库 / 变更) share the foot's full width on one line, and the labels are shortened.
 - An available update no longer gets a pill of its own: the status bar's `desktop v…` / `omp v…` button lights up instead (accent tint + dot marker), hovering rolls the label up inside the button to the new version, and clicking opens the update modal — idle it still checks for updates.
 - The project side's Sessions fold moves "new conversation" from the list foot into the fold header as an icon (beside the title, hover for the label — the same slot as the Explorer's filter icon).

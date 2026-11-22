@@ -3,7 +3,9 @@
    project strip's + menu row, and a strip button's right-click "Edit
    project…"). Draft state transitions live in app/project-open.js; the
    commit flow (backend validation, the appearance patch, openProject)
-   in app-live.jsx.
+   in app-live.jsx. The colour field is the strip icon's display colour
+   (`icon`); it never rethemes the rendered tab — that is the theme/accent
+   override, Settings → Appearance.
    ═════════════════════════════════════════════════════════════════════ */
 
 const { ACCENTS: _POM_ACCENTS } = window.OMP_SETTINGS;
@@ -84,25 +86,27 @@ function ProjectOpenModal({ mode, draft, error, busy, profileLabel, onChange, on
             onChange={e => onChange({ ...draft, name: e.target.value })} />
         </label>
         <div className="pom-field">
-          <span className="pom-label">{OMP_TR("Accent")}</span>
-          <div className="pom-swatches" role="radiogroup" aria-label={OMP_TR("Accent")}>
-            <button type="button" role="radio" aria-checked={!draft.accent} className="pom-sw-default"
-              title={OMP_TR("Default")} onClick={() => onChange({ ...draft, accent: "" })}>
+          <span className="pom-label">{OMP_TR("Icon colour")}</span>
+          <div className="pom-swatches" role="radiogroup" aria-label={OMP_TR("Icon colour")}>
+            <button type="button" role="radio" aria-checked={!draft.icon} className="pom-sw-default"
+              title={OMP_TR("Default")} onClick={() => onChange({ ...draft, icon: "" })}>
               {OMP_TR("Default")}
             </button>
             {_POM_ACCENTS.map(c => (
               <button key={c} type="button" role="radio" className="pom-sw"
-                aria-checked={!!draft.accent && draft.accent.toLowerCase() === c.toLowerCase()}
+                aria-checked={!!draft.icon && draft.icon.toLowerCase() === c.toLowerCase()}
                 aria-label={c} title={c} style={{ background: c }}
-                onClick={() => onChange({ ...draft, accent: c })} />
+                onClick={() => onChange({ ...draft, icon: c })} />
             ))}
             {/* The native colour picker (the hex field it replaces could
                 not show the colour); empty (Default) it rests at the
-                palette's first colour, dimmed (project-open.css). */}
-            <input className={`pom-color${draft.accent ? "" : " pom-color-empty"}`} type="color"
-              aria-label={OMP_TR("Accent")} title={draft.accent || OMP_TR("custom colour")}
-              value={_POM_colorValue(draft.accent, _POM_ACCENTS[0])}
-              onChange={e => onChange({ ...draft, accent: e.target.value })} />
+                palette's first colour, dimmed (project-open.css). The
+                colour is display-only: the strip icon's, never the tab's
+                theme accent. */}
+            <input className={`pom-color${draft.icon ? "" : " pom-color-empty"}`} type="color"
+              aria-label={OMP_TR("Icon colour")} title={draft.icon || OMP_TR("custom colour")}
+              value={_POM_colorValue(draft.icon, _POM_ACCENTS[0])}
+              onChange={e => onChange({ ...draft, icon: e.target.value })} />
           </div>
         </div>
         {!edit && (

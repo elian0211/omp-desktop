@@ -187,4 +187,20 @@ check("inkFor expands #rgb and rejects unusable input", () => {
   assert.equal(A.inkFor(undefined), null);
 });
 
+// The new-project modal's field: a display colour that rides alongside the
+// theme/accent override without touching it, and prunes like the rest.
+check("icon is a display-only field beside theme and accent", () => {
+  let map = A.set({}, "/a/Proj", { icon: "#E05AA2" });
+  assert.deepEqual(map, { "/a/Proj": { icon: "#e05aa2" } });
+  // A Settings accent override coexists with it.
+  map = A.set(map, "/a/Proj", { accent: "#112233" });
+  assert.deepEqual(map, { "/a/Proj": { icon: "#e05aa2", accent: "#112233" } });
+  // Invalid colours are ignored; undefined clears; an emptied entry is gone.
+  assert.deepEqual(A.set(map, "/a/Proj", { icon: "zzz" }), map);
+  map = A.set(map, "/a/Proj", { icon: undefined });
+  assert.deepEqual(map, { "/a/Proj": { accent: "#112233" } });
+  assert.deepEqual(A.resolve({ projectAppearance: map, accent: "#8af0c8" }, "/a/Proj"),
+    { theme: undefined, accent: "#112233", themed: false, accented: true });
+});
+
 console.log(`project-appearance: ${passed} checks passed`);

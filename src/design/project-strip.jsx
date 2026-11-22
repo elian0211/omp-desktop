@@ -64,7 +64,10 @@ function ProjectStrip({
           const appearance = group.path
             ? window.OMP_PROJECT_APPEARANCE.forProject(projectAppearances, group.path)
             : null;
-          const accent = appearance?.accent || "var(--fg-4)";
+          // The strip icon's colour: the modal's display-only `icon` field,
+          // else the Settings row's per-project accent (which rethemes the
+          // rendered tab too), else the muted default.
+          const accent = appearance?.icon || appearance?.accent || "var(--fg-4)";
           const tip = [
             appearance?.label,
             group.path || group.name,

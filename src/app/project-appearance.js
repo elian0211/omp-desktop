@@ -1,7 +1,9 @@
 // Per-project appearance: a folder can override the global theme and accent,
-// and carry a display-only name label (the new-project modal's edit mode;
+// carry a display-only name label (the new-project modal's edit mode;
 // the strip, the recents rows and the Settings row prefer it, tooltips keep
-// the real path). Keys are the tab's recorded
+// the real path) and a display-only strip icon colour (`icon`, the
+// new-project modal's field — it never rethemes the tab; that is what
+// `accent` is for). Keys are the tab's recorded
 // project folder normalised the same way the sidebar groups tabs
 // (`OMP_PROJECT_NAV.normPath`); paths that reach the frontend from the OS are
 // already canonicalised in Rust, so a symlinked folder shares its target's
@@ -28,17 +30,20 @@
     return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(color ?? "").trim());
   }
 
-  /** `{theme, accent}` → only the values worth storing. `undefined` clears a
-   *  field, which is how the Settings row removes one half of an override. */
+  /** `{theme, accent, icon, label}` → only the values worth storing.
+   *  `undefined` clears a field, which is how the Settings row removes one
+   *  half of an override. `theme`/`accent` retheme the rendered tab
+   *  (Settings → Appearance); `icon` is the strip icon's display colour
+   *  (the new-project modal) and never touches the theme. */
   function patchValues(patch) {
     const out = {};
     for (const [name, value] of Object.entries(patch || {})) {
       if (name === "theme") {
         if (value === undefined) out.theme = undefined;
         else if (typeof value === "string" && value.trim()) out.theme = value.trim();
-      } else if (name === "accent") {
-        if (value === undefined) out.accent = undefined;
-        else if (isHex(value)) out.accent = String(value).trim().toLowerCase();
+      } else if (name === "accent" || name === "icon") {
+        if (value === undefined) out[name] = undefined;
+        else if (isHex(value)) out[name] = String(value).trim().toLowerCase();
       } else if (name === "label") {
         // Present-but-blank clears (the edit modal's submit sends both
         // fields, so erasing the name falls back to the folder basename);
@@ -58,7 +63,7 @@
     const values = patchValues(patch);
     const current = (map || {})[k] || {};
     const merged = { ...current, ...values };
-    for (const name of ["theme", "accent", "label"]) if (merged[name] === undefined) delete merged[name];
+    for (const name of ["theme", "accent", "icon", "label"]) if (merged[name] === undefined) delete merged[name];
     const next = { ...(map || {}) };
     if (Object.keys(merged).length) next[k] = merged;
     else delete next[k];

@@ -874,7 +874,7 @@ function App() {
       console.error("[app] failed to open project:", err);
     }
   };
-  // Edit mode prefills the stored label/accent; the folder is the identity
+  // Edit mode prefills the stored label/icon colour; the folder is the identity
   // and stays read-only. Reset drops the whole override (the Settings row's
   // reset semantics), restoring the folder's own name and the muted look.
   const handleEditProject = path => {
