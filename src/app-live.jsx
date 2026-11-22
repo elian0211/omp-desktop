@@ -1542,6 +1542,10 @@ function App() {
         <OmpSetupModal ompSetup={ompSetup} />
       )}
 
+      {ompSetup.open && (
+        <OmpSetupModal ompSetup={ompSetup} />
+      )}
+
       {closeConfirm && (
         <ConfirmCloseDialog confirm={closeConfirm} onAnswer={handleCloseAnswer} />
       )}

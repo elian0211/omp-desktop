@@ -22,7 +22,7 @@
   const BIG_STEP = 64;
 
   const PANES = {
-    sidebar: { min: 160, max: 420, wide: 220, narrow: 188 },
+    sidebar: { min: 210, max: 420, wide: 220, narrow: 210 },
     split: { min: 240, max: 560, wide: 320, narrow: 280 },
     rail: { min: 240, max: 520, wide: 280, narrow: 240 },
     files: { min: 420, max: 1600, wide: 760, narrow: 560 },

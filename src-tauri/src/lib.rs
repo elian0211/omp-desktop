@@ -1546,6 +1546,14 @@ fn omp_locate() -> Option<String> {
     agent::spawn::omp_binary_path()
 }
 
+/// The omp binary the trusted PATH resolves, or `None` when there is none —
+/// the setup modal's boot check. Pure filesystem lookups, no child run —
+/// see `agent::spawn::omp_binary_path`.
+#[tauri::command]
+fn omp_locate() -> Option<String> {
+    agent::spawn::omp_binary_path()
+}
+
 /// Kill every child process tree the app owns — omp sessions first, then
 /// the tabs' Chromium browsers, running widget plugins and terminal shells —
 /// on the calling thread. For the exits where managed state is never dropped

@@ -56,9 +56,10 @@ function FilesView({ ui, onOpen, onReference, onReveal, showFilter = true }) {
           deleted: node.status === "Deleted",
         })}
       />
-      {/* 项目文件 / 仓库文件 / 改动文件: the folder-cut tree, the whole
-          repository tree, and the changed-files filter; 改动文件 keeps the
-          folder scope (the read paths are folder-relative). */}
+      {/* 项目 / 仓库 / 变更: the folder-cut tree, the whole repository
+          tree, and the changed-files filter; 变更 keeps the folder scope
+          (the read paths are folder-relative). The tabs fill the foot's
+          width (layout/activity.css `.fv-tabs`). */}
       <div className="fv-foot">
         <div className="fv-tabs" role="tablist" aria-label={OMP_TR("file filter")}>
           {[
@@ -74,7 +75,6 @@ function FilesView({ ui, onOpen, onReference, onReveal, showFilter = true }) {
             </button>
           ))}
         </div>
-        <span className="fv-spacer" />
         {ui.counts.files > 0 && !repo && !ui.searchMode && (
           <button type="button" className={`btn ghost gitb-toggle gitb-commented ${ui.commentedOnly ? "on" : ""}`}
             onClick={() => ui.setCommentedOnly(!ui.commentedOnly)} aria-pressed={ui.commentedOnly}

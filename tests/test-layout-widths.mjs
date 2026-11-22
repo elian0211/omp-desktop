@@ -32,12 +32,12 @@ const sum = (o) => Object.values(o).reduce((a, b) => a + b, 0);
 check("unsaved panes take their defaults, narrower ones in a narrow window", () => {
   const all = ["sidebar", "split", "rail"];
   assert.deepEqual(L.fit({}, all, 1600), { sidebar: 220, split: 320, rail: 280 });
-  assert.deepEqual(L.fit({ sidebar: 0, split: 0, rail: 0 }, all, 1600, { narrow: true }), { sidebar: 188, split: 280, rail: 240 });
+  assert.deepEqual(L.fit({ sidebar: 0, split: 0, rail: 0 }, all, 1600, { narrow: true }), { sidebar: 210, split: 280, rail: 240 });
 });
 
 check("a saved width is used within the pane's bounds", () => {
   assert.deepEqual(L.fit({ sidebar: 300, rail: 400 }, ["sidebar", "rail"], 1600), { sidebar: 300, rail: 400 });
-  assert.deepEqual(L.fit({ sidebar: 50, rail: 5000 }, ["sidebar", "rail"], 1600), { sidebar: 160, rail: 520 });
+  assert.deepEqual(L.fit({ sidebar: 50, rail: 5000 }, ["sidebar", "rail"], 1600), { sidebar: 210, rail: 520 });
   assert.deepEqual(L.fit({ sidebar: NaN }, ["sidebar"], 1600), { sidebar: 220 }, "NaN is unsaved");
 });
 
@@ -47,15 +47,15 @@ check("only open panes get a width", () => {
 
 check("panes give up room in proportion to their slack so the chat keeps CHAT_MIN", () => {
   // 300 + 400 = 700, room for panes 1000 - 420 = 580 → over by 120.
-  // Slack: 140 + 160 = 300; each gives 120 / 300 of its slack: 56 and 64.
+  // Slack: 90 + 160 = 250; each gives 120 / 250 of its slack: 44 and 77.
   const w = L.fit({ sidebar: 300, rail: 400 }, ["sidebar", "rail"], 1000);
-  assert.deepEqual(w, { sidebar: 244, rail: 336 });
+  assert.deepEqual(w, { sidebar: 256, rail: 323 });
   assert.ok(1000 - sum(w) >= L.CHAT_MIN);
 });
 
 check("a window too narrow even for the minimums keeps them; the chat gets the rest", () => {
   const w = L.fit({}, ["sidebar", "split", "rail"], 960);
-  assert.deepEqual(w, { sidebar: 160, split: 240, rail: 240 });
+  assert.deepEqual(w, { sidebar: 210, split: 240, rail: 240 });
 });
 
 check("the reserved column (browser panel) counts against the chat's room", () => {
@@ -83,10 +83,10 @@ check("a resize saves the layout shown: the panes the window squeezed keep their
   const open = ["sidebar", "split", "rail"];
   const saved = { sidebar: 420, split: 0, rail: 400 };
   const widths = L.fit(saved, open, 1440);
-  assert.deepEqual(widths, { sidebar: 357, split: 300, rail: 361 });
-  const patch = L.settle("split", 302, widths, saved, open, 1440);
-  assert.deepEqual(patch, { split: 302, sidebar: 357, rail: 361 });
-  assert.deepEqual(L.fit({ ...saved, ...patch }, open, 1440), { sidebar: 357, split: 302, rail: 361 }, "nothing moves once saved");
+  assert.deepEqual(widths, { sidebar: 364, split: 298, rail: 357 });
+  const patch = L.settle("split", 299, widths, saved, open, 1440);
+  assert.deepEqual(patch, { split: 299, sidebar: 364, rail: 357 });
+  assert.deepEqual(L.fit({ ...saved, ...patch }, open, 1440), { sidebar: 364, split: 299, rail: 357 }, "nothing moves once saved");
 });
 
 check("a resize leaves the panes that would stay as shown alone (a default stays 0)", () => {
@@ -103,8 +103,8 @@ check("a sidebar resize keeps a default dock pane where it is shown", () => {
   const shown = L.fit(saved, open, 1100);
   assert.deepEqual(shown, { sidebar: 220, dock: 300 }, "the wide defaults");
   const patch = L.settle("sidebar", 200, shown, saved, open, 1100);
-  assert.deepEqual(patch, { sidebar: 200 }, "the dock pane would ask for what it already shows");
-  assert.deepEqual(L.fit({ ...saved, ...patch }, open, 1100), { sidebar: 200, dock: 300 }, "nothing moves once saved");
+  assert.deepEqual(patch, { sidebar: 200 }, "settle saves the raw px; the clamp lives in fit");
+  assert.deepEqual(L.fit({ ...saved, ...patch }, open, 1100), { sidebar: 210, dock: 300 }, "the shown sidebar refits to the minimum");
 });
 
 check("keys: the arrow pointing away from the pane grows it", () => {
