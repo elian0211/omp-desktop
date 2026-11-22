@@ -376,8 +376,34 @@
     return {
       rows, lanes,
       tips, ttlMs: facts.ttlMs, rates: facts.rates, counts,
+      fileChildren: fileChildren(tree.files),
     };
   }
 
-  window.OMP_CONV_TREE = { buildModel, isLive, isCached };
+  /** Per family file path, how many other files continue from it (its
+   *  children): a `parentSession` names its parent by path component or by
+   *  bare session id — the file stem, the durable id. The tree menu uses
+   *  the count to hold an archive until the children are archived first
+   *  (the Rust side re-checks and refuses). */
+  function fileChildren(files) {
+    const byName = new Map(), byStem = new Map();
+    for (const f of files) {
+      const name = f.path.replace(/\\/g, "/").split("/").pop() ?? f.path;
+      byName.set(name, f.path);
+      byStem.set(name.replace(/\.jsonl$/i, ""), f.path);
+    }
+    const counts = new Map();
+    for (const f of files) {
+      const raw = f.parentSession;
+      if (!raw) continue;
+      const hasSuffix = /\.jsonl$/i.test(raw);
+      const target = raw.includes("/") || raw.includes("\\") || hasSuffix
+        ? byName.get(raw.replace(/\\/g, "/").split("/").pop())
+        : byStem.get(raw);
+      if (target) counts.set(target, (counts.get(target) ?? 0) + 1);
+    }
+    return counts;
+  }
+
+  window.OMP_CONV_TREE = { buildModel, isLive, isCached, fileChildren };
 })();

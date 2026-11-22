@@ -98,6 +98,26 @@ fn an_archive_refuses_paths_outside_the_root_and_non_sessions() {
     cleanup(&root);
 }
 
+/// omp's leaf-only rule: a conversation another file continued from (its
+/// `parentSession` names this one) stays until the child is archived first.
+#[test]
+fn an_archive_refuses_a_conversation_with_later_branches() {
+    let root = unique_temp_root("leafonly");
+    let archive_root = root.join("archive").join("sessions");
+    fs::create_dir_all(&root).expect("create root");
+    let parent = root.join("parent.jsonl");
+    fs::write(&parent, "{\"entry\":1}\n").expect("write parent");
+    fs::write(
+        root.join("child.jsonl"),
+        "{\"type\":\"session\",\"id\":\"p1x\",\"parentSession\":\"parent.jsonl\"}\n",
+    )
+    .expect("write child");
+    let err = archive_in(&root, &archive_root, parent.to_string_lossy().as_ref()).unwrap_err();
+    assert!(err.contains("later branch"), "{err}");
+    assert!(parent.exists(), "the parent survives the refused archive");
+    cleanup(&root);
+}
+
 #[test]
 fn a_delete_removes_the_file_and_its_artifacts() {
     let root = unique_temp_root("delete");

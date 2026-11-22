@@ -124,13 +124,6 @@ function ProjectSessionsFold({
         </div>
         )
       ))}
-      {group.path && (
-        <button type="button" className="pside-new"
-          onClick={() => onNewInProject(group.path, group.profile)}>
-          <_PSideIcon name="plus" size={10} />
-          {OMP_TR("new conversation")}
-        </button>
-      )}
       {menu && ReactDOM.createPortal(
         <div ref={menuRef} className="pstrip-pop" style={{ left: Math.max(8, Math.min(menu.x, window.innerWidth - 208)), top: Math.max(8, Math.min(menu.y, window.innerHeight - 140)) }}
           role="menu" aria-label={menu.tab.name}
@@ -174,7 +167,14 @@ function ProjectSide({
   return (
     <div className="side-panel project-side" role="region" aria-label={OMP_TR("Project side")}>
       <_PSideFold id="sessions" title={OMP_TR("Sessions")} open={folds.sessions !== false}
-        onToggle={onToggleFold}>
+        onToggle={onToggleFold}
+        extra={group?.path && (
+          <button type="button" className="pside-head-btn" aria-label={OMP_TR("new conversation")}
+            title={OMP_TR("new conversation")}
+            onClick={() => onNewInProject(group.path, group.profile)}>
+            <_PSideIcon name="plus" size={11} />
+          </button>
+        )}>
         <ProjectSessionsFold
           group={group}
           activeId={activeId}

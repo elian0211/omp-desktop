@@ -128,18 +128,17 @@ function TabBar({
 
 // ── Status bar (footer) ──────────────────────────────────────────────
 // Connection, the project's branch (a picker, design/branch-menu.jsx),
-// tokens, cost, throughput and todo on the left, the app version (and an
-// available update) on the right; the app's other buttons are on the
-// toolbar (toolbar.jsx). The model and
-// thinking level are not repeated here: the composer's pills below the
-// prompt box show (and change) both. It spans the window under the
-// workspace; the st-ctx meter, st-cost and st-tps cells (each with its
-// separator) drop out when the window is narrow (layout/rail.css).
-// `updater`: app/use-updater.jsx's result, as UpdateModal takes it.
+// tokens, cost, throughput and todo on the left, the desktop and omp
+// versions (and available updates) on the right; the app's other buttons
+// are on the toolbar (toolbar.jsx). The model and thinking level are not
+// repeated here: the composer's pills below the prompt box show (and
+// change) both. It spans the window under the workspace; the st-ctx
+// meter, st-cost and st-tps cells (each with its separator) drop out when
+// the window is narrow (layout/rail.css).
+// `updater` / `ompUpdater`: use-updater / use-omp-updater results.
 // `branch`: the active tab's (null: no repository, or a detached HEAD);
 // `tabId` keys the picker, so a tab switch closes it; `branchLocked`: an
 // agent works on the folder, so the picker lists but does not switch.
-function StatusBar({ ctx, todoDone, todoTotal, onTodo, updater, branch, tabId, branchLocked, bridge }) {
 // One status-bar version button (desktop / omp). Idle: the running version,
 // click checks for updates. With an update available: the button lights up
 // (accent + dot), hovering rolls the label up inside the button to the new
@@ -166,6 +165,7 @@ function VersionButton({ up, name, checkTitle, pillTitle }) {
   );
 }
 
+function StatusBar({ ctx, todoDone, todoTotal, onTodo, updater, ompUpdater, branch, tabId, branchLocked, bridge }) {
   const todoChord = hintFor("desktop.panel.todo", "");
   return (
     <div className="status">
@@ -194,15 +194,12 @@ function VersionButton({ up, name, checkTitle, pillTitle }) {
         <span style={{ color: "var(--accent)" }}>{OMP_TR("todo")} {todoDone}/{todoTotal}</span>
       </button>
       <div className="status-gap" />
-      {updater.pillVersion && (
-        <button className="btn outlined update-pill mono" onClick={updater.openModal}
-          title={OMP_TR("OMP Desktop v{v} is available", { v: updater.pillVersion })}>
-          <Icon name="arrowUp" size={9} />v{updater.pillVersion}
-        </button>
-      )}
-      <button className="btn ghost app-version mono" onClick={updater.check} title={OMP_TR("check for updates")}>
-        {updater.version ? `v${updater.version}` : "—"}
-      </button>
+      <VersionButton up={updater} name="desktop"
+        checkTitle={OMP_TR("check for OMP Desktop updates")}
+        pillTitle={OMP_TR("OMP Desktop v{v} is available", { v: updater.pillVersion })} />
+      <VersionButton up={ompUpdater} name="omp"
+        checkTitle={OMP_TR("check for omp updates")}
+        pillTitle={OMP_TR("omp v{v} is available", { v: ompUpdater?.pillVersion })} />
     </div>
   );
 }
@@ -227,14 +224,43 @@ function SessionMinimap({ messages, hoveredIdx, onHover, onClick }) {
   }, [messages]);
   const logMax = Math.log10(maxTokens + 1) || 1;
 
+  // The hovered cell's enlargement floats above the grid instead of
+  // scaling the cell in place: a transformed cell extends the grid's
+  // scrollable overflow (it is the scroller), so the scrollbar flickered
+  // in and out and the page jumped. The overlay lives in `.minimap` — a
+  // non-scrolling ancestor — positioned from the cell's viewport rect
+  // (FLIP-style: measured, not laid out), recomputed on scroll.
+  const wrapRef = React.useRef(null);
+  const cellEls = React.useRef(new Map());
+  const [zoom, setZoom] = React.useState(null);
+  const measureZoom = React.useCallback(idx => {
+    const el = cellEls.current.get(idx);
+    const wrap = wrapRef.current;
+    if (!el || !wrap || !el.getBoundingClientRect().width) { setZoom(null); return; }
+    const c = el.getBoundingClientRect();
+    const w = wrap.getBoundingClientRect();
+    const size = c.width * 1.6;
+    setZoom({
+      left: c.left - w.left + c.width / 2 - size / 2,
+      top: c.top - w.top + c.height / 2 - size / 2,
+      size,
+      background: el.style.background,
+      opacity: el.style.opacity,
+    });
+  }, []);
+  React.useLayoutEffect(() => {
+    if (hoveredIdx == null) setZoom(null);
+    else measureZoom(hoveredIdx);
+  }, [hoveredIdx, measureZoom]);
+
   return (
-    <div className="minimap">
+    <div className="minimap" ref={wrapRef}>
       <div className="minimap-head">
         <Icon name="minimap" size={11} color="var(--fg-3)" />
         <span className="mono" style={{ color: "var(--fg-3)" }}>{OMP_TR("session")}</span>
         <span className="mono" style={{ marginLeft: "auto", color: "var(--fg-4)" }}>{shown}</span>
       </div>
-      <div className="minimap-grid">
+      <div className="minimap-grid" onScroll={() => hoveredIdx != null && measureZoom(hoveredIdx)}>
         {messages.map((m, i) => {
           if (window.OMP_TURN_STATUS.isHidden(m)) return null;
           let hue = "var(--fg-5)";
@@ -288,6 +314,7 @@ function SessionMinimap({ messages, hoveredIdx, onHover, onClick }) {
 
           return (
             <div key={m._id ?? i}
+              ref={el => { if (el) cellEls.current.set(i, el); else cellEls.current.delete(i); }}
               className={cls}
               style={{ background: hue, opacity }}
               title={title}
@@ -297,6 +324,11 @@ function SessionMinimap({ messages, hoveredIdx, onHover, onClick }) {
           );
         })}
       </div>
+      {zoom && (
+        <div className="minimap-zoom" aria-hidden="true"
+          style={{ left: zoom.left, top: zoom.top, width: zoom.size, height: zoom.size,
+            background: zoom.background, opacity: zoom.opacity }} />
+      )}
       <div className="minimap-legend">
         <span className="minimap-legend-item"><i style={{ background: "var(--fg-3)" }} />{OMP_TR("you")}</span>
         <span className="minimap-legend-item"><i style={{ background: "var(--accent)" }} />{OMP_TR("assistant")}</span>

@@ -20,12 +20,12 @@
 const {
   Icon, ChatView, PlanPill, Composer, CommandBridge, WindowChrome, Toolbar, TabBar, SubagentPane,
   ProjectStrip, ProjectSide, EmptyWorkspace, ToolDock,
-  StatusBar, ConversationTree, HistoryModal, GitBrowser, FilePreview, FilePreviewTitle, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, useTweaks,
+  StatusBar, ConversationTree, HistoryModal, GitBrowser, FilePreview, FilePreviewTitle, ApprovalRulesPanel, UsageStatsPanel, PromptHistoryModal, UpdateModal, OmpUpdateModal, OmpSetupModal, useTweaks,
   SettingsPage, ConfirmCloseDialog, ProjectOpenModal,
   useWidgets, WidgetCard, WidgetErrorCard, WidgetApprovalCard, WidgetBoundary,
   TWEAK_DEFAULTS, NULL_MODEL, EMPTY_PROJECT, DEFAULT_PROFILE_ID,
   INTENT_FRAMING, APPROVAL_PROMPT,
-  useBridgeSnapshot, useThemeEffect, useSubagentManager, useUpdater, useConversationTree, useGoalMode, useTerminal, TerminalPanels, timeNow,
+  useBridgeSnapshot, useThemeEffect, useSubagentManager, useUpdater, useOmpUpdater, useOmpSetup, useConversationTree, useGoalMode, useTerminal, TerminalPanels, timeNow,
   useKeymap, useKeymapDispatch, useBrowser, BrowserDock, FilesPanel, useFileComments, MarkdownLinkContext: _AL_MdLinkCtx,
   usePaneWidths, ResizeHandle, useRemote, usePrAutomation, SessionView,
 } = window;
@@ -483,6 +483,7 @@ function App() {
   const subagentList = React.useMemo(() => window.OMP_SUBAGENTS.listAgents(subagents), [subagents]);
 
   const updater = useUpdater({ bridge, autoCheck: t.updateCheck ?? true, skipped: t.skippedUpdate, setTweak });
+  const ompUpdater = useOmpUpdater({ bridge, autoCheck: t.updateCheck ?? true, skipped: t.skippedOmpUpdate, setTweak });
   const ompSetup = useOmpSetup();
 
   // The browser panel (app/use-browser.jsx). `activeProject.id`, like the
@@ -901,6 +902,22 @@ function App() {
   const handleArchiveSession = tab => closeThenOperate(tab, "archive", OMP_TR("Archive failed"));
   const handleDeleteSession = tab => closeThenOperate(tab, "delete", OMP_TR("Delete failed"));
 
+  // The conversation tree's right-click menu: archive/delete a *family*
+  // file that is not this tab's own conversation (no tab holds it — the
+  // menu disables rows whose file is open elsewhere), so a stale parent
+  // branch can be cleaned up where the tree shows it. No tab to close;
+  // the Rust side re-checks the leaf-only rule and confinement.
+  const handleTreeArchiveFile = async path => {
+    const res = await bridge.archiveSession(path, activeProfileId);
+    if (!res.ok) { bridge.note(`**${OMP_TR("Archive failed")}:** ${res.error}`); return; }
+    convTree.refresh();
+  };
+  const handleTreeDeleteFile = async path => {
+    const res = await bridge.deleteSession(path, activeProfileId);
+    if (!res.ok) { bridge.note(`**${OMP_TR("Delete failed")}:** ${res.error}`); return; }
+    convTree.refresh();
+  };
+
   // Close tab → kills that session's omp process; bridge updates tab list.
   // Guarded: with `confirmBusyClose` a working tab asks first (live.js).
   const handleCloseTab = id => { bridge?.closeSessionGuarded(id); };
@@ -912,6 +929,12 @@ function App() {
   const sidePanelOpen = projectSideOpen;
   const toggleSidePanel = () => setProjectSide(!projectSideOpen);
   const projectGroups = React.useMemo(() => groupTabs(sessions), [sessions]);
+  // Session files currently held by a tab: the tree menu's archive/delete
+  // refuses these (the tab's omp process owns the file).
+  const openSessionFiles = React.useMemo(
+    () => new Set(sessions.map(s => s.sessionFile).filter(Boolean)),
+    [sessions],
+  );
   const activeGroup = React.useMemo(() => {
     if (!activeSessionId) return null;
     return projectGroups.find(g => g.tabs.some(t => t.id === activeSessionId)) || null;
@@ -1033,7 +1056,7 @@ function App() {
     "app.interrupt":           () => {
       // Only abort when no overlay is open (overlays handle Escape themselves),
       // and never from the Settings page, which covers the chat.
-      if (stab.active || bridgeOpen || historyOpen || gitOpen || rulesOpen || promptHistoryOpen || updater.open) return;
+      if (stab.active || bridgeOpen || historyOpen || gitOpen || rulesOpen || promptHistoryOpen || updater.open || ompUpdater.open) return;
       if (planOpen) { setPlanOpen(false); return; }
       if (streaming) handleAbort();
     },
@@ -1181,7 +1204,7 @@ function App() {
     profiles, startupProfileId, onSetStartupProfile: handleSetStartupProfile,
     approvalModes, sessions, activeProject,
     widgets, widgetTweakKey: _widgetTweakKey, extToggles, keyOpts: settingsKeyOpts,
-    panes, terminalHeight: terminal.height, updater,
+    panes, terminalHeight: terminal.height, updater, ompUpdater,
     goal: { profileId: activeProfileId },
     openApprovals: () => setRulesOpen(true),
     section: stab.section,
@@ -1466,6 +1489,8 @@ function App() {
                     loading={convTree.loading} treeKey={convTree.key} now={convTree.now} since={convTree.since}
                     streaming={streaming}
                     onBranch={convTree.branch} onFork={convTree.fork} onOpenFile={convTree.openFile}
+                    onArchiveFile={handleTreeArchiveFile} onDeleteFile={handleTreeDeleteFile}
+                    openFiles={openSessionFiles}
                   />
                 </div>
               ) : (
@@ -1478,7 +1503,8 @@ function App() {
           </div>
           {/* Full window width under the workspace: no side column (rail,
               tree, browser panel, subagent split) ever narrows it. */}
-          <StatusBar ctx={liveCtx} todoDone={todoCounts.done} todoTotal={todoCounts.total} onTodo={() => setPlanOpen(v => !v)} updater={updater}
+          <StatusBar ctx={liveCtx} todoDone={todoCounts.done} todoTotal={todoCounts.total} onTodo={() => setPlanOpen(v => !v)}
+            updater={updater} ompUpdater={ompUpdater}
             branch={activeProject.branch} tabId={activeProject.id} bridge={bridge}
             branchLocked={window.OMP_TURN_STATUS.busyInRepo(sessions, activeProject.repoRoot)} />
         </div>
@@ -1538,8 +1564,8 @@ function App() {
         <UpdateModal updater={updater} busyTabs={window.OMP_UPDATER.busyTabCount(sessions)} />
       )}
 
-      {ompSetup.open && (
-        <OmpSetupModal ompSetup={ompSetup} />
+      {ompUpdater.open && (
+        <OmpUpdateModal ompUpdater={ompUpdater} />
       )}
 
       {ompSetup.open && (

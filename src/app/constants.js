@@ -55,6 +55,7 @@
     "followOutput": true,
     "updateCheck": true,
     "skippedUpdate": null,
+    "skippedOmpUpdate": null,
     "sidebar": true,
     "sidebarWidth": 0,
     "splitWidth": 0,

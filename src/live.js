@@ -5143,6 +5143,18 @@
       return _invokeResult("app_update_check");
     },
 
+    /** Installed omp version from `omp --version` — `{ok, value}` or
+     *  `{ok: false, error}` (omp missing / unreadable). */
+    ompVersion() {
+      return _invokeResult("omp_version");
+    },
+
+    /** `{ok: true, value: OmpUpdateInfo}` from `omp update --check`, or
+     *  `{ok: false, error}`. The desktop never installs omp itself. */
+    checkOmpUpdate() {
+      return _invokeResult("omp_update_check");
+    },
+
     /** Download, install and relaunch into the update the last check
      *  found, reporting `{downloaded, total}` to `onProgress` meanwhile.
      *  Windows: resolves only on failure (the installer takes over the

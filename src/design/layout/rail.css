@@ -240,7 +240,7 @@
 .legend-item span:first-child { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 
 /* ── Minimap (dense token-heatmap grid) ───────────────────────────── */
-.minimap { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+.minimap { display: flex; flex-direction: column; gap: 6px; min-height: 0; position: relative; }
 .minimap-head { display: flex; align-items: center; gap: 6px; font-size: var(--d-text-xs); }
 
 .minimap-grid {
@@ -256,19 +256,33 @@
   aspect-ratio: 1 / 1;
   border-radius: 2px;
   cursor: pointer;
-  transition: transform 80ms ease, outline-color 80ms ease;
+  transition: outline-color 80ms ease;
   outline: 1px solid transparent;
   position: relative;
 }
+/* Highlight only — the enlargement is `.minimap-zoom`, an overlay floating
+   above the grid (a scaled cell here would extend the scroller's overflow
+   and flicker the scrollbar). */
 .minimap-cell:hover,
 .minimap-cell.hot {
-  transform: scale(1.6);
   outline-color: var(--fg-2);
-  z-index: 2;
   opacity: 1 !important;
 }
 .minimap-cell.live {
   animation: pulseDot 1.8s ease-in-out infinite;
+}
+/* The hovered cell's enlargement: absolutely positioned in `.minimap`
+   (non-scrolling), sized and placed from the cell's measured rect, above
+   everything; transparent to the pointer, so hover stays on the cell. */
+.minimap-zoom {
+  position: absolute; z-index: 3;
+  border-radius: 4px; pointer-events: none;
+  outline: 1px solid var(--fg-2);
+  animation: mmZoomIn 80ms ease;
+}
+@keyframes mmZoomIn {
+  from { transform: scale(0.75); }
+  to   { transform: scale(1); }
 }
 
 .minimap-legend {

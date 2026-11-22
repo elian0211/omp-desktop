@@ -212,8 +212,8 @@
         tweak("autoName", "toggle", "Name tabs automatically", "omp titles a new conversation from its first turns (one small model call). `/rename` always wins.", "rename title"),
       ] },
       { name: "Updates", rows: [
-        tweak("updateCheck", "toggle", "Check for updates", "Look for a new release shortly after launch and every 6 hours. You choose when to install; “Check now” works either way.", "version release"),
-        custom("version", "Version", "The installed OMP Desktop and the newest release.", "version update check skipped"),
+        tweak("updateCheck", "toggle", "Check for updates", "Look for a new OMP Desktop or omp release shortly after launch and every 6 hours. You choose when to install; “Check now” works either way.", "version release omp"),
+        custom("version", "Version", "The installed OMP Desktop and omp, and the newest releases.", "version update check skipped omp"),
       ] },
     ] },
     { id: "remote", icon: "live", title: "Remote access", blurb: "Read your sessions, answer questions and steer the agent from a phone on your network. Off by default; nothing listens until you enable it.", groups: [

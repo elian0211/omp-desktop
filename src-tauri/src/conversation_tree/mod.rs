@@ -15,7 +15,7 @@
 //! - [`parse`] — one file → kept entries and header facts.
 //! - [`tests`] — behaviour tests against temp directories.
 
-mod family;
+pub mod family;
 mod parse;
 
 use std::collections::HashSet;
@@ -44,6 +44,11 @@ pub struct TreeFile {
     /// The file's last entry, mapped to its nearest kept ancestor.
     pub leaf_id: Option<String>,
     pub current: bool,
+    /// Raw `parentSession` of the `session` header: the file this one was
+    /// forked/branched from (a path, or the parent's bare session id). The
+    /// tree menu uses it to tell a file with later branches — which must
+    /// stay put until they are archived first — from a leaf.
+    pub parent_session: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

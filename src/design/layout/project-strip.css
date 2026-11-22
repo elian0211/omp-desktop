@@ -87,6 +87,8 @@
 /* Disabled session-menu items keep their reason in the title. */
 .pstrip-item:disabled { opacity: 0.45; cursor: default; }
 .pstrip-item:disabled:hover { background: transparent; color: inherit; }
+/* The tree menu's delete confirmation text (second click commits). */
+.tree-menu-danger { color: var(--rose); }
 .pside-fold-title {
   font-size: var(--d-text-xs); font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.04em;
@@ -102,14 +104,6 @@
 .pside-fold.grow > .pside-fold-body { overflow: auto; }
 .pside-sessions { padding: 4px 6px 8px; }
 .pside-sessions .psb-row.psb-tab { padding-left: 6px; }
-.pside-new {
-  appearance: none; border: 0; background: transparent;
-  display: inline-flex; align-items: center; gap: 6px;
-  width: 100%; padding: 6px 8px; margin-top: 2px;
-  color: var(--fg-4); font-size: var(--d-text-xs); cursor: pointer;
-  border-radius: var(--r-1);
-}
-.pside-new:hover { background: var(--bg-hover); color: var(--fg-2); }
 .pside-empty {
   padding: 12px 10px; font-size: var(--d-text-xs); color: var(--fg-4); line-height: 1.4;
 }

@@ -80,14 +80,18 @@ pub fn omp_output<S: AsRef<OsStr>>(args: &[S]) -> Result<std::process::Output, S
     Omp::locate()?.output(args)
 }
 
-/// The absolute omp path [`Omp::locate`] resolves, or `None` when there is
-/// none on the trusted PATH — the setup modal's `omp_locate` boot check.
-/// Located per call, so a freshly installed omp is found without an app
-/// restart.
-pub fn omp_binary_path() -> Option<String> {
-    Omp::locate()
-        .ok()
-        .map(|omp| omp.binary.display().to_string())
+/// Like [`omp_output`], but forces plain stdout so a caller can parse it:
+/// `NO_COLOR=1` and the colour-forcing env vars omp/chalk honour are cleared.
+/// Used by `omp_update` (`omp --version`, `omp update --check`).
+pub fn omp_output_plain<S: AsRef<OsStr>>(args: &[S]) -> Result<std::process::Output, String> {
+    let omp = Omp::locate()?;
+    let mut cmd = omp.command();
+    cmd.env("NO_COLOR", "1")
+        .env_remove("FORCE_COLOR")
+        .env_remove("CLICOLOR_FORCE")
+        .env_remove("CLICOLOR");
+    crate::spawn_gate::output(cmd.args(args))
+        .map_err(|e| format!("failed to run {}: {e}", omp.binary.display()))
 }
 
 /// The absolute omp path [`Omp::locate`] resolves, or `None` when there is

@@ -24,7 +24,7 @@ Feature internals (RPC frames, state machines, measured omp behaviour) live in `
 |`file-preview.md`|file preview of read-card paths and agent file links, read-card image thumbnails, write-card paths to the git browser|`project_file.rs`, `app/file-preview.js`, `design/chat/file-preview.jsx`, `design/chat/tool-card.jsx`|
 |`file-comments.md`|files panel: the git browser's tree beside a commentable file, explain / comment marks on lines or a selection, composer chips, the text merged into the message, stale marks|`app/file-comments.js`, `app/use-file-comments.jsx`, `design/files/`, `design/git/file-tree.jsx` (optional props), `git_browser/status.rs` `StatusView.folder`, `app-live.jsx` `takeChips`|
 |`goal-mode.md`|goal mode, auto-continue|`app/goal.js`, `goal_config.rs`|
-|`updater.md`|in-app updates, release signing|`updater.rs`, `app/updater.js`|
+|`updater.md`|in-app updates (desktop + omp check), release signing|`updater.rs`, `omp_update.rs`, `app/updater.js`, `app/omp-updater.js`|
 |`external-open.md`|"Open with OMP Desktop" on macOS/Windows/Linux|`external_open.rs`, `src-tauri/packaging/`|
 |`frontend-load-order.md`|full `src/index.html` script-order rationale|`src/index.html`|
 |`i18n.md`|interface language: source-string keys, `OMP_TR`/`OMP_I18N`, dictionary files and load slot, switching, plurals, scope and tests|`src/app/i18n.js`, `src/app/i18n-zh.js`, `app-live.jsx` `OMP_I18N.set`|

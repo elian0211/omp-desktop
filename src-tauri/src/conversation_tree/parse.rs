@@ -46,6 +46,8 @@ struct Line<'a> {
     updated_at: Option<String>,
     first_kept_entry_id: Option<String>,
     cwd: Option<String>,
+    /// The `session` header's `parentSession`: the file this one forked from.
+    parent_session: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -173,6 +175,8 @@ fn kept_kind(line: &Line) -> Option<Kind> {
 #[derive(Default)]
 struct State {
     cwd: Option<String>,
+    /// The `session` header's `parentSession` (which file this forked from).
+    parent_session: Option<String>,
     /// `(timestamp, title)` of the newest non-empty title seen.
     title: Option<(String, String)>,
     /// Every entry id → index into `entries` of its nearest kept
@@ -238,6 +242,7 @@ impl State {
             "title" => return self.consider_title(line.updated_at, line.title),
             "session" => {
                 self.cwd = line.cwd;
+                self.parent_session = line.parent_session;
                 return;
             }
             _ => {}
@@ -297,6 +302,7 @@ impl State {
                 title: self.title.map(|(_, t)| t),
                 leaf_id,
                 current: false,
+                parent_session: self.parent_session,
             },
             entries: self.entries,
         }

@@ -184,13 +184,14 @@ function treeTags(row, model, now, since, currentFile, onOpenTip) {
 }
 
 // Memoized: the pane re-renders with App on every bridge update.
-const TreeRow = React.memo(function TreeRow({ row, model, now, since, selected, currentFile, onSelect, onOpenTip }) {
+const TreeRow = React.memo(function TreeRow({ row, model, now, since, selected, currentFile, onSelect, onOpenTip, onContext }) {
   window.OMP_I18N.useLocale();
   const tags = treeTags(row, model, now, since, currentFile, onOpenTip);
   const height = tags.length ? TREE_ROW_H_TAGGED : TREE_ROW_H;
   return (
     <div className={`tree-row s-${row.state}${selected ? " selected" : ""}`} style={{ height }}
-      onClick={() => onSelect(row.id)}>
+      onClick={() => onSelect(row.id)}
+      onContextMenu={onContext ? e => { e.preventDefault(); onContext(e, row); } : undefined}>
       <TreeGraph graph={row.graph} state={row.state} lanes={model.lanes} height={height} />
       <div className="tree-text">
         <div className="tree-prompt" title={row.text}>

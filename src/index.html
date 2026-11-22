@@ -125,11 +125,10 @@
        app/use-updater.jsx read window.OMP_UPDATER. -->
   <script src="app/updater.js"></script>
 
-  <!-- Setup guide (no omp found at boot): pure helpers — the official
-       install one-liners per OS and the site URL. IIFE;
-       app/use-omp-setup.jsx and design/omp-setup-modal.jsx read
-       window.OMP_OMP_SETUP. -->
-  <script src="app/omp-setup.js"></script>
+  <!-- omp update-check state (status-bar omp version): pure reducer +
+       selectors. IIFE; design/omp-update-modal.jsx and
+       app/use-omp-updater.jsx read window.OMP_OMP_UPDATER. -->
+  <script src="app/omp-updater.js"></script>
 
   <!-- Setup guide (no omp found at boot): pure helpers — the official
        install one-liners per OS and the site URL. IIFE;
@@ -558,6 +557,9 @@
   <script type="text/babel" src="design/history-modal.jsx"></script>
   <script type="text/babel" src="design/prompt-history-modal.jsx"></script>
   <script type="text/babel" src="design/update-modal.jsx"></script>
+  <!-- omp update check modal (status-bar omp version); same chrome as
+       update-modal.jsx, copies `omp update` instead of installing. -->
+  <script type="text/babel" src="design/omp-update-modal.jsx"></script>
   <!-- Setup guide modal (no omp found at boot); same chrome as
        omp-update-modal.jsx, reads window.OMP_OMP_SETUP
        (app/omp-setup.js, above) at call time. -->
@@ -644,6 +646,9 @@
   <script type="text/babel" src="app/use-keymap.jsx"></script>
   <script type="text/babel" src="app/use-subagent-manager.jsx"></script>
   <script type="text/babel" src="app/use-updater.jsx"></script>
+  <!-- omp update check (status bar); reads window.OMP_OMP_UPDATER
+       (app/omp-updater.js, above). -->
+  <script type="text/babel" src="app/use-omp-updater.jsx"></script>
   <!-- Setup guide state (boot `omp_locate` check); reads
        window.OMP_OMP_SETUP (app/omp-setup.js, above). -->
   <script type="text/babel" src="app/use-omp-setup.jsx"></script>

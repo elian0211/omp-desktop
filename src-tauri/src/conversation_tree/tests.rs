@@ -693,7 +693,7 @@ fn serialises_the_contract_field_names() {
     assert_eq!(keys(&value), ["entries", "files"]);
     assert_eq!(
         keys(&value["files"][0]),
-        ["current", "cwd", "leafId", "path", "title"]
+        ["current", "cwd", "leafId", "parentSession", "path", "title"]
     );
     assert_eq!(
         keys(&value["entries"][1]),
@@ -727,4 +727,63 @@ fn serialises_the_contract_field_names() {
     assert_eq!(value["entries"][0]["kind"], "user");
     assert_eq!(value["entries"][0]["ts"], 1);
     assert_eq!(value["entries"][1]["parentId"], "u1");
+}
+
+/// `children_of` lists the family files whose `parentSession` names the
+/// parent — by path component and by bare session id alike; a leaf and an
+/// unrelated file have none.
+#[test]
+fn children_of_lists_the_files_forked_from_a_conversation() {
+    let fx = Fixture::new("children");
+    let session = |id: &str, parent: Option<&str>| {
+        let mut head = json!({"type":"session","version":3,"id":id,"timestamp":"2026-10-04T09:00:00.000Z","cwd":"/work/proj"});
+        if let Some(parent) = parent {
+            head["parentSession"] = json!(parent);
+        }
+        head
+    };
+    fx.put(
+        "parent.jsonl",
+        &[session("p1", None), user("u1", Some("p1"), "q", 1)],
+    );
+    fx.put(
+        "child-path.jsonl",
+        &[
+            session(
+                "c1",
+                Some(fx.path("parent.jsonl").to_string_lossy().as_ref()),
+            ),
+            user("u1", None, "q", 2),
+        ],
+    );
+    fx.put(
+        "child-id.jsonl",
+        &[session("c2", Some("p1")), user("u1", None, "q", 3)],
+    );
+    fx.put(
+        "grandchild.jsonl",
+        &[
+            session(
+                "c3",
+                Some(fx.path("child-path.jsonl").to_string_lossy().as_ref()),
+            ),
+            user("u1", None, "q", 4),
+        ],
+    );
+    fx.put(
+        "leaf.jsonl",
+        &[session("l1", None), user("u1", None, "l", 5)],
+    );
+
+    assert_eq!(
+        family::children_of(&fx.dir, "parent.jsonl").unwrap(),
+        ["child-id.jsonl", "child-path.jsonl"]
+    );
+    assert_eq!(
+        family::children_of(&fx.dir, "child-path.jsonl").unwrap(),
+        ["grandchild.jsonl"]
+    );
+    assert!(family::children_of(&fx.dir, "leaf.jsonl")
+        .unwrap()
+        .is_empty());
 }

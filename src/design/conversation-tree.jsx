@@ -40,10 +40,37 @@ function TreeSummary({ model }) {
 
 function ConversationTree({
   model, currentFile, error, loading, treeKey, now, since, streaming,
-  onBranch, onFork, onOpenFile,
+  onBranch, onFork, onOpenFile, onArchiveFile, onDeleteFile, openFiles,
 }) {
   const [selectedId, setSelectedId] = React.useState(null);
   React.useEffect(() => { setSelectedId(null); }, [treeKey]);
+
+  // A row's right-click menu. Branch/fork work on any prompt; the file
+  // operations target the family file the row belongs to when that is not
+  // the tab's own (`row.openFile`) — the tree is where a conversation's
+  // branches are visible, so a stale parent branch can be archived or
+  // deleted right where it shows. Delete confirms inside the menu (the
+  // second click on the item); archive is leaf-only — a file other files
+  // continue from must wait, and Rust refuses it again regardless.
+  const [menu, setMenu] = React.useState(null); // { x, y, row }
+  const [confirming, setConfirming] = React.useState(false);
+  const menuRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!menu) return undefined;
+    const close = () => setMenu(null);
+    const onDown = e => { if (!menuRef.current?.contains(e.target)) close(); };
+    const onKey = e => { if (e.key === "Escape") { e.preventDefault(); close(); } };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menu]);
+  const openRowMenu = React.useCallback((e, r) => {
+    setConfirming(false);
+    setMenu({ x: e.clientX, y: e.clientY, row: r });
+  }, []);
 
   const listRef = React.useRef(null);
   const scrolledFor = React.useRef("");
@@ -91,11 +118,57 @@ function ConversationTree({
           ? <_CT_Compaction key={row.id} row={row} now={now} />
           : <_CT_Row key={row.id} row={row} model={model} now={now} since={since}
               selected={selected?.id === row.id} currentFile={currentFile}
-              onSelect={setSelectedId} onOpenTip={openTip} />)}
+              onSelect={setSelectedId} onOpenTip={openTip}
+              onContext={onArchiveFile ? openRowMenu : undefined} />)}
       </div>
       {model && selected && (
         <_CT_Detail key={selected.id} row={selected} tips={model.tips} now={now} since={since}
           streaming={streaming} onBranch={onBranch} onFork={onFork} onOpenFile={onOpenFile} />
+      )}
+      {menu && ReactDOM.createPortal(
+        <div ref={menuRef} className="pstrip-pop" role="menu" aria-label={OMP_TR("conversation actions")}
+          style={{ left: Math.max(8, Math.min(menu.x, window.innerWidth - 240)), top: Math.max(8, Math.min(menu.y, window.innerHeight - 190)) }}
+          onKeyDown={e => window.menuKeyNav(e, menuRef.current, '[role="menuitem"]', () => setMenu(null))}>
+          <button type="button" className="pstrip-item" role="menuitem"
+            onClick={() => { setMenu(null); onBranch(menu.row.id); }}>
+            <span className="mono">{OMP_TR("Branch here")}</span>
+          </button>
+          <button type="button" className="pstrip-item" role="menuitem"
+            onClick={() => { setMenu(null); onFork(menu.row.id); }}>
+            <span className="mono">{OMP_TR("Fork after the reply")}</span>
+          </button>
+          {menu.row.openFile && onArchiveFile && (
+            <>
+              <button type="button" className="pstrip-item" role="menuitem"
+                onClick={() => { setMenu(null); onOpenFile(menu.row.openFile); }}>
+                <span>{OMP_TR("Open in new tab")}</span>
+              </button>
+              <button type="button" className="pstrip-item" role="menuitem"
+                disabled={openFiles?.has(menu.row.openFile) || (model.fileChildren.get(menu.row.openFile) ?? 0) > 0}
+                title={(model.fileChildren.get(menu.row.openFile) ?? 0) > 0
+                  ? OMP_TR("{n} later branches continue from this conversation — archive them first", { n: model.fileChildren.get(menu.row.openFile) })
+                  : openFiles?.has(menu.row.openFile) ? OMP_TR("the conversation is open in another tab") : menu.row.openFile}
+                onClick={() => { setMenu(null); onArchiveFile(menu.row.openFile); }}>
+                <span>{OMP_TR("archive session")}</span>
+              </button>
+              <button type="button" className="pstrip-item" role="menuitem"
+                disabled={openFiles?.has(menu.row.openFile)}
+                title={openFiles?.has(menu.row.openFile) ? OMP_TR("the conversation is open in another tab") : menu.row.openFile}
+                onClick={() => {
+                  // Two-step: the first pick turns the item into the
+                  // confirmation; anything else closes the menu.
+                  if (!confirming) { setConfirming(true); return; }
+                  setMenu(null);
+                  onDeleteFile(menu.row.openFile);
+                }}>
+                <span className={confirming ? "tree-menu-danger" : undefined}>
+                  {confirming ? OMP_TR("delete this conversation?") : OMP_TR("delete session")}
+                </span>
+              </button>
+            </>
+          )}
+        </div>,
+        document.body,
       )}
     </aside>
   );

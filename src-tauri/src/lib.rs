@@ -29,6 +29,7 @@ mod models_config;
 mod navigation_guard;
 mod omp_cli;
 mod omp_native_config;
+mod omp_update;
 mod open_tabs;
 mod pr_automation;
 mod private_fs;
@@ -1538,12 +1539,18 @@ async fn app_update_install(
     updater::install(&app, &state).await
 }
 
-/// The omp binary the trusted PATH resolves, or `None` when there is none —
-/// the setup modal's boot check. Pure filesystem lookups, no child run —
-/// see `agent::spawn::omp_binary_path`.
+/// Installed omp version from `omp --version` — see `omp_update::version`.
+/// `spawn_blocking`: shells out to omp.
 #[tauri::command]
-fn omp_locate() -> Option<String> {
-    agent::spawn::omp_binary_path()
+async fn omp_version() -> Result<String, String> {
+    off_ipc(omp_update::version).await?
+}
+
+/// Whether a newer omp is available (`omp update --check`) — see
+/// `omp_update::check`. `spawn_blocking`: shells out and may hit the network.
+#[tauri::command]
+async fn omp_update_check() -> Result<omp_update::OmpUpdateInfo, String> {
+    off_ipc(omp_update::check).await?
 }
 
 /// The omp binary the trusted PATH resolves, or `None` when there is none —
@@ -1927,6 +1934,8 @@ pub fn run() {
             model_usage_list,
             app_update_check,
             app_update_install,
+            omp_version,
+            omp_update_check,
             omp_locate,
             set_close_guard,
             remote::commands::remote_status,

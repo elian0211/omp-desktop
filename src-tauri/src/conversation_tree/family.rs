@@ -65,32 +65,24 @@ fn header_of(path: &Path) -> Header {
     Header::default()
 }
 
-/// The listed file a `parentSession` value names. A value with a path
-/// separator or a `.jsonl` suffix is a path and links by file name; omp's
-/// TUI `/fork`, `--fork` and move-off write the parent's bare session id
-/// instead, found through `by_id`.
-fn resolve<'a>(
-    raw: &str,
-    files: &'a HashMap<String, Header>,
-    by_id: &HashMap<&str, &'a str>,
-) -> Option<&'a str> {
-    let has_suffix = Path::new(raw)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("jsonl"));
-    if raw.contains(['/', '\\']) || has_suffix {
-        files.get_key_value(base_name(raw)).map(|(k, _)| k.as_str())
-    } else {
-        by_id.get(raw).copied()
+/// The file-name id is the durable one (a header `id` can be stale, see
+/// `saved_sessions`), so it is inserted last and wins a clash.
+fn by_file_id(files: &HashMap<String, Header>) -> HashMap<String, String> {
+    let mut by_id: HashMap<String, String> = HashMap::new();
+    for (name, header) in files {
+        if let Some(id) = header.id.as_deref() {
+            by_id.insert(id.to_owned(), name.clone());
+        }
+        if let Some(id) = canonical_id_from_stem(Path::new(name)) {
+            by_id.insert(id.to_owned(), name.clone());
+        }
     }
+    by_id
 }
 
-/// File names of the family of `current` (a `.jsonl` name inside `dir`):
-/// `current` first, the rest oldest first by name, at most
-/// [`MAX_FAMILY_FILES`].
-///
-/// # Errors
-/// Returns the I/O error when `dir` cannot be listed.
-pub fn family_of(dir: &Path, current: &str) -> io::Result<Vec<String>> {
+/// Every family member of `dir` and the file its `parentSession` resolves
+/// to, as `(name, parent_name)` pairs. Unresolvable parents are skipped.
+fn parent_edges(dir: &Path) -> io::Result<Vec<(String, String)>> {
     let mut files: HashMap<String, Header> = HashMap::new();
     for item in fs::read_dir(dir)? {
         let Ok(item) = item else { continue };
@@ -106,31 +98,45 @@ pub fn family_of(dir: &Path, current: &str) -> io::Result<Vec<String>> {
             files.insert(name.to_string(), header_of(&path));
         }
     }
-
-    // The file-name id is the durable one (a header `id` can be stale, see
-    // `saved_sessions`), so it is inserted last and wins a clash.
-    let mut by_id: HashMap<&str, &str> = HashMap::new();
+    let by_id = by_file_id(&files);
+    let mut edges = Vec::new();
     for (name, header) in &files {
-        if let Some(id) = header.id.as_deref() {
-            by_id.insert(id, name);
-        }
-    }
-    for name in files.keys() {
-        if let Some(id) = canonical_id_from_stem(Path::new(name)) {
-            by_id.insert(id, name);
-        }
-    }
-
-    let mut links: HashMap<&str, Vec<&str>> = HashMap::new();
-    for (name, header) in &files {
-        let parent = header
-            .parent
-            .as_deref()
-            .and_then(|raw| resolve(raw, &files, &by_id));
+        let Some(raw) = header.parent.as_deref() else {
+            continue;
+        };
+        // A value with a path separator or a `.jsonl` suffix is a path and
+        // links by file name; omp's TUI `/fork`, `--fork` and move-off write
+        // the parent's bare session id instead, found through `by_id`.
+        let has_suffix = Path::new(raw)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("jsonl"));
+        let parent = if raw.contains(['/', '\\']) || has_suffix {
+            Some(base_name(raw).to_owned())
+        } else {
+            by_id.get(raw).cloned()
+        };
         if let Some(parent) = parent {
-            links.entry(name).or_default().push(parent);
-            links.entry(parent).or_default().push(name);
+            // Only files that actually sit in this directory link.
+            if files.contains_key(&parent) {
+                edges.push((name.clone(), parent));
+            }
         }
+    }
+    Ok(edges)
+}
+
+/// File names of the family of `current` (a `.jsonl` name inside `dir`):
+/// `current` first, the rest oldest first by name, at most
+/// [`MAX_FAMILY_FILES`].
+///
+/// # Errors
+/// Returns the I/O error when `dir` cannot be listed.
+pub fn family_of(dir: &Path, current: &str) -> io::Result<Vec<String>> {
+    let edges = parent_edges(dir)?;
+    let mut links: HashMap<&str, Vec<&str>> = HashMap::new();
+    for (name, parent) in &edges {
+        links.entry(name).or_default().push(parent);
+        links.entry(parent).or_default().push(name);
     }
     for neighbours in links.values_mut() {
         neighbours.sort_unstable();
@@ -150,4 +156,21 @@ pub fn family_of(dir: &Path, current: &str) -> io::Result<Vec<String>> {
     rest.sort_unstable();
     rest.insert(0, current.to_string());
     Ok(rest)
+}
+
+/// The family members of `current` (a `.jsonl` name inside `dir`) that were
+/// forked or branched *from* it — its children. One per child file, sorted;
+/// an archive must wait until these are gone (omp's leaf-only rule), while a
+/// delete takes them along implicitly by losing their origin.
+///
+/// # Errors
+/// Returns the I/O error when `dir` cannot be listed.
+pub fn children_of(dir: &Path, current: &str) -> io::Result<Vec<String>> {
+    let mut children: Vec<String> = parent_edges(dir)?
+        .into_iter()
+        .filter(|(_, parent)| parent == current)
+        .map(|(name, _)| name)
+        .collect();
+    children.sort_unstable();
+    Ok(children)
 }

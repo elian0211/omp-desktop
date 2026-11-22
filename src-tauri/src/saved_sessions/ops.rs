@@ -134,6 +134,27 @@ fn restore_source_from(archive: &Path, source: &Path) -> Result<PathBuf, String>
 /// archive ends up the only copy, the error says so instead of deleting it.
 pub fn archive_in(sessions_root: &Path, archive_root: &Path, path: &str) -> Result<String, String> {
     let (source, canonical_root) = resolve_session_file(sessions_root, path)?;
+    // omp's leaf-only rule: a conversation other files were branched/forked
+    // from stays put until its children are archived first (elsewhere the
+    // tree still shows them continuing from a moved file).
+    let dir = source
+        .parent()
+        .ok_or_else(|| "session file has no parent directory".to_owned())?;
+    let name = source
+        .file_name()
+        .ok_or_else(|| "session file has no name".to_owned())?
+        .to_string_lossy()
+        .into_owned();
+    let children = crate::conversation_tree::family::children_of(dir, &name)
+        .map_err(|e| format!("cannot list the conversation family: {e}"))?;
+    if !children.is_empty() {
+        let pronoun = if children.len() == 1 { "it" } else { "them" };
+        return Err(format!(
+            "this conversation has {} later branch{} — archive {pronoun} first, or delete it instead",
+            children.len(),
+            if children.len() == 1 { "" } else { "es" },
+        ));
+    }
     let (destination, legacy) = archive_destinations(archive_root, &canonical_root, &source)?;
     if destination.exists() || legacy.exists() {
         return Err(format!(
