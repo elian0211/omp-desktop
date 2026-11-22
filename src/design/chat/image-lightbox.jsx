@@ -34,23 +34,35 @@ function _LB_viewport() {
   return { w: r.width - 2, h: r.height - 41 };
 }
 
-// Modal: the app behind (#root — a modal renders in a portal on <body>) is
-// inert, so Tab can't reach, and Enter can't press, what opened it and stack
-// a second one. `scrimRef` takes focus; it goes back where it was on close.
+// Modal: the app behind is inert, so Tab can't reach, and Enter can't
+// press, what opened it and stack a second one. The lightbox portals into
+// .window (inside #root), and inert inherits down the tree — so it goes on
+// the scrim's siblings there (the title bar, the workspace, the status
+// bar), never on an ancestor. On the very first commit the portal can land
+// in <body> (.window is not in the document yet); nothing is inerted then,
+// and the ResizeObserver re-applies once the scrim moves into the window
+// and its box changes. `scrimRef` takes focus; it goes back where it was
+// on close.
 function useModalLayer(scrimRef) {
   React.useEffect(() => {
     const prev = document.activeElement;
-    const root = document.getElementById("root");
-    if (root) root.inert = true;
-    scrimRef.current?.focus();
     return () => {
-      if (root) root.inert = false;
-      // preventScroll: the opener may have scrolled out of view meanwhile
-      // (a streaming reply), and scrolling back to it would unpin the chat
-      // from the bottom (app/scroll-pin.js).
       if (prev?.isConnected) prev.focus({ preventScroll: true });
     };
-  }, [scrimRef]);
+  }, []);
+  // Re-applied after every render (idempotent, before paint): on the very
+  // first commit the portal can land in <body> (.window is not in the
+  // document yet), and the re-render that follows the portal moving into
+  // the window re-applies with the right host.
+  React.useLayoutEffect(() => {
+    const s = scrimRef.current;
+    if (!s) return undefined;
+    const host = s.closest(".window");
+    const siblings = host ? [...host.children].filter(el => el !== s) : [];
+    siblings.forEach(el => { el.inert = true; });
+    if (host) s.focus();
+    return () => siblings.forEach(el => { el.inert = false; });
+  });
 }
 
 function ImageLightbox({ images, index, onIndex, onClose, thumbFor }) {
