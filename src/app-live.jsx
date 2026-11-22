@@ -1507,8 +1507,6 @@ function App() {
             updater={updater} ompUpdater={ompUpdater}
             branch={activeProject.branch} tabId={activeProject.id} bridge={bridge}
             branchLocked={window.OMP_TURN_STATUS.busyInRepo(sessions, activeProject.repoRoot)} />
-        </div>
-      </div>
 
       <CommandBridge
         open={bridgeOpen}
@@ -1583,6 +1581,8 @@ function App() {
           onChange={handleModalChange} onBrowse={handleModalBrowse}
           onCommit={handleModalCommit} onCancel={() => setProjectModal(null)} />
       )}
+        </div>
+      </div>
     </_AL_MdLinkCtx.Provider>
   );
 }

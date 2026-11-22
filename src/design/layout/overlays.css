@@ -16,12 +16,17 @@
 }
 
 /* ── Command bridge (⌘K) ───────────────────────────────────────────── */
+/* Anchored inside .window (app-live renders the modals there): it starts
+   below the title bar (.chrome's 38px + its 1px border), so the chrome
+   stays visible and clickable, and covers only the window — never the
+   viewport outside it. The wash and blur stay light so the workspace
+   reads through. */
 .bridge-scrim {
-  position: fixed; inset: 0;
-  background: color-mix(in oklab, var(--bg-app) 70%, transparent);
-  backdrop-filter: blur(10px);
+  position: absolute; top: 39px; left: 0; right: 0; bottom: 0;
+  background: color-mix(in oklab, var(--bg-app) 40%, transparent);
+  backdrop-filter: blur(4px);
   display: flex; align-items: flex-start; justify-content: center;
-  padding-top: 14vh;
+  padding-top: 12vh;
   z-index: 100;
 }
 .bridge {
@@ -85,9 +90,9 @@
 
 /* ── Plan kanban ───────────────────────────────────────────────────── */
 .kanban-scrim {
-  position: fixed; inset: 0;
-  background: color-mix(in oklab, var(--bg-app) 75%, transparent);
-  backdrop-filter: blur(10px);
+  position: absolute; top: 39px; left: 0; right: 0; bottom: 0;
+  background: color-mix(in oklab, var(--bg-app) 45%, transparent);
+  backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center;
   padding: 32px;
   z-index: 90;

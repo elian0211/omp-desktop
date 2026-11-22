@@ -5,9 +5,9 @@
 
 /* ── Shell ──────────────────────────────────────────────────────────────── */
 .gitb-scrim {
-  position: fixed; inset: 0;
-  background: color-mix(in oklab, var(--bg-app) 75%, transparent);
-  backdrop-filter: blur(10px);
+  position: absolute; top: 39px; left: 0; right: 0; bottom: 0;
+  background: color-mix(in oklab, var(--bg-app) 45%, transparent);
+  backdrop-filter: blur(4px);
   display: flex; align-items: stretch; justify-content: stretch;
   padding: 18px;
   z-index: 90;
