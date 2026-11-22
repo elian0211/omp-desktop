@@ -109,4 +109,17 @@ check("the edit patch round-trips through OMP_PROJECT_APPEARANCE.set", () => {
   assert.deepEqual(map, { "/a/Proj": { label: "Work", accent: "#112233" } });
 });
 
+// The colour input (`type="color"`) needs a six-digit hex; anything else —
+// including the empty draft — reads as the fallback the caller supplies.
+check("colorInputValue normalises to the six-digit form the control needs", () => {
+  assert.equal(O.colorInputValue("#112233", "#8af0c8"), "#112233");
+  assert.equal(O.colorInputValue("#AABBCC", "#8af0c8"), "#aabbcc");
+  assert.equal(O.colorInputValue("aabbcc", "#8af0c8"), "#aabbcc");
+  assert.equal(O.colorInputValue("#abc", "#8af0c8"), "#aabbcc");
+  assert.equal(O.colorInputValue("", "#8af0c8"), "#8af0c8");
+  assert.equal(O.colorInputValue(null, "#8af0c8"), "#8af0c8");
+  assert.equal(O.colorInputValue("zzz", "#8af0c8"), "#8af0c8");
+  assert.equal(O.colorInputValue("#11223", "#8af0c8"), "#8af0c8");
+});
+
 console.log(`project-open: ${passed} checks passed`);

@@ -46,14 +46,19 @@
   background: transparent;
 }
 .pom-sw-default[aria-checked="true"] { color: var(--fg); border-color: var(--fg); }
-.pom-hex {
-  width: 76px; padding: 3px 6px;
-  font-size: var(--d-text-xs); color: var(--fg);
-  background: var(--bg-window);
-  border: 1px solid var(--line-bright); border-radius: var(--r-1);
+/* The native colour picker: one swatch like the palette's, opening the OS
+   picker; with no accent set (Default) it rests at the palette's first
+   colour and dims so the unapplied state shows. */
+.pom-color {
+  appearance: none; width: 24px; height: 20px; padding: 0; flex: none;
+  border: 2px solid transparent; border-radius: 6px;
+  background: var(--bg-window); cursor: pointer;
 }
-.pom-hex:focus { outline: 1px solid var(--accent); outline-offset: -1px; }
-.pom-hex::placeholder { color: var(--fg-4); }
+.pom-color:not(.pom-color-empty) { border-color: var(--fg); }
+.pom-color-empty { opacity: 0.45; }
+.pom-color:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pom-color::-webkit-color-swatch-wrapper { padding: 0; }
+.pom-color::-webkit-color-swatch { border: none; border-radius: 3px; }
 .pom-hint { font-size: var(--d-text-xs); color: var(--fg-4); }
 .pom-error { font-size: var(--d-text-xs); color: var(--rose); }
 .pom-foot {

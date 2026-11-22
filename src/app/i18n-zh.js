@@ -949,6 +949,7 @@ window.OMP_I18N.add("zh", {
   "or with npm": "或用 npm",
   "copy": "复制",
   "official website": "官方网站",
+  "custom colour": "自定义颜色",
   "{n} changed": "{n} 处已更改",
   "Actions for pull request #{n}": "PR #{n} 的操作",
   "Auto-fix · {status}": "自动修复 · {status}",

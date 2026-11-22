@@ -62,5 +62,19 @@
     return { label, accent: fields.accent || undefined };
   }
 
-  window.OMP_PROJECT_OPEN = { emptyDraft, draftForFolder, draftForEdit, finalize, appearancePatch };
+  /** What the modal's colour input (`type="color"`) holds: the draft accent
+   *  normalised to the six-digit `#rrggbb` the control requires, else
+   *  `fallback` while no accent is set — the control cannot be empty, the
+   *  "Default" swatch carries that state. */
+  function colorInputValue(accent, fallback) {
+    let a = String(accent || "").trim().toLowerCase();
+    if (a && !a.startsWith("#")) a = "#" + a;
+    let m = /^#([0-9a-f]{6})$/.exec(a);
+    if (m) return "#" + m[1];
+    m = /^#([0-9a-f]{3})$/.exec(a);
+    if (m) return "#" + [...m[1]].map(c => c + c).join("");
+    return fallback;
+  }
+
+  window.OMP_PROJECT_OPEN = { emptyDraft, draftForFolder, draftForEdit, finalize, appearancePatch, colorInputValue };
 })();

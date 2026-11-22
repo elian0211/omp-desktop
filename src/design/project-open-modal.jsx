@@ -7,6 +7,7 @@
    ═════════════════════════════════════════════════════════════════════ */
 
 const { ACCENTS: _POM_ACCENTS } = window.OMP_SETTINGS;
+const { colorInputValue: _POM_colorValue } = window.OMP_PROJECT_OPEN;
 
 function ProjectOpenModal({ mode, draft, error, busy, profileLabel, onChange, onBrowse, onCommit, onCancel }) {
   const panelRef = React.useRef(null);
@@ -95,8 +96,12 @@ function ProjectOpenModal({ mode, draft, error, busy, profileLabel, onChange, on
                 aria-label={c} title={c} style={{ background: c }}
                 onClick={() => onChange({ ...draft, accent: c })} />
             ))}
-            <input className="pom-hex mono" type="text" spellCheck={false} aria-label={OMP_TR("Accent")}
-              value={draft.accent} placeholder="#RRGGBB" maxLength={7}
+            {/* The native colour picker (the hex field it replaces could
+                not show the colour); empty (Default) it rests at the
+                palette's first colour, dimmed (project-open.css). */}
+            <input className={`pom-color${draft.accent ? "" : " pom-color-empty"}`} type="color"
+              aria-label={OMP_TR("Accent")} title={draft.accent || OMP_TR("custom colour")}
+              value={_POM_colorValue(draft.accent, _POM_ACCENTS[0])}
               onChange={e => onChange({ ...draft, accent: e.target.value })} />
           </div>
         </div>
