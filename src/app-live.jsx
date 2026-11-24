@@ -1273,6 +1273,9 @@ function App() {
               group={activeGroup}
               activeId={stab.active ? null : activeSessionId}
               noTab={noTab}
+              projectLabel={activeGroup?.path
+                ? window.OMP_PROJECT_APPEARANCE.forProject(t.projectAppearance, activeGroup.path)?.label
+                : null}
               onSelectTab={handleSelectTab}
               onCloseTab={handleCloseTab}
               onRenameTab={handleRenameTab}
@@ -1333,11 +1336,11 @@ function App() {
                     hideToolActivity={t.hideToolActivity}
                     showToolCallsUnfolded={t.showToolCallsUnfolded}
                   />
-                  <PlanPill
+                  {!stab.active && <PlanPill
                     phases={todoPhases}
                     expanded={planOpen}
                     onToggle={() => setPlanOpen(v => !v)}
-                  />
+                  />}
                   <TerminalPanels sessions={sessions} activeId={planKey} terminal={terminal} />
                   <Composer
                     sessionId={planKey}

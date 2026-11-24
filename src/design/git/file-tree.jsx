@@ -17,7 +17,7 @@
    `allFiles`). */
 
 const { Icon: _GT_Icon } = window;
-const { flatten: _GT_flatten, filterFiles: _GT_filterFiles } = window.OMP_GIT_BROWSER;
+const { flatten: _GT_flatten, filterFiles: _GT_filterFiles, formatSize: _GT_formatSize, isTreeLeaf: _GT_isLeaf } = window.OMP_GIT_BROWSER;
 
 const GIT_STATUS_META = {
   Modified:  { label: "M", color: "var(--amber)",  title: "modified" },
@@ -96,10 +96,9 @@ function GitFileTree({
         {!error && rows.map(({ node, depth, flat }) => {
           const meta = node.status ? GIT_STATUS_META[node.status] : null;
           const active = !node.dir && node.path === selected;
-          // An ignored directory is collapsed by Rust (its content is all
-          // ignored): rendered like a file, no expansion.
-          const leaf = !node.dir || node.status === "Ignored";
-          // A file and a dir can share a path ("x" deleted, "x/a" added).
+          // Ignored dirs and nested repositories are directory boundaries:
+          // directory styling, no child traversal or fake chevron.
+          const leaf = _GT_isLeaf(node);
           return (
             <div key={`${node.dir ? "d" : "f"}:${node.path}`} role="treeitem" aria-selected={active}
               aria-expanded={node.dir && !leaf ? changedOnly || expanded.has(node.path) : undefined}
@@ -122,6 +121,7 @@ function GitFileTree({
               </span>
               {node.dir && node.changed > 0 && !changedOnly && <span className="gitb-dot" title={OMP_TR("{n} changed", { n: node.changed })} />}
               {!node.dir && badges?.get(node.path) > 0 && <span className="gitb-badge mono">{badges.get(node.path)}</span>}
+              {!node.dir && node.size != null && <span className="gitb-size mono" title={`${node.size} bytes`}>{_GT_formatSize(node.size)}</span>}
               {meta && <span className="gitb-mark mono" style={{ color: meta.color }} title={meta.title}>{meta.label}</span>}
             </div>
           );

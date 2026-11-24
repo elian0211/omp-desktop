@@ -1,7 +1,10 @@
 /* Project strip + project side (2026-11-21 project-dock-layout) ───── */
 
 .project-strip {
-  width: var(--w-project-strip, 48px); flex: none; min-height: 0;
+  width: var(--w-project-strip, 48px);
+  min-width: var(--w-project-strip, 48px);
+  max-width: var(--w-project-strip, 48px);
+  flex: none; min-height: 0;
   display: flex; flex-direction: column; align-items: center;
   padding: 8px 0; gap: 6px;
   border-right: 1px solid var(--line);
@@ -11,20 +14,28 @@
 .project-strip-list {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   flex: 1; min-height: 0; overflow-y: auto; width: 100%;
+  /* The scrollbar reserves its gutter even when absent, so the buttons
+     never shift as projects come and go. */
+  scrollbar-gutter: stable;
 }
 .project-strip-btn {
   position: relative;
   appearance: none; border: 2px solid transparent;
   width: 32px; height: 32px; padding: 0; border-radius: 8px;
   display: inline-flex; align-items: center; justify-content: center;
-  /* A project's own accent (--ps-bg, the modal's pick) is used at full
-     strength with --ps-ink chosen against it; the default muted mix keeps
-     the window's own ink. */
-  background: var(--ps-bg, color-mix(in oklab, var(--ps-accent, var(--fg-4)) 55%, var(--bg-surface)));
-  color: var(--ps-ink, var(--bg-window)); cursor: pointer; flex: none;
+  /* Inactive: a quiet per-theme chip (--strip-idle-*, styles.css) that
+     never competes for attention — vivid accents stay out of the idle
+     row. The active project overrides with its own colour (`.active`,
+     --ps-bg from project-strip.jsx; unpicked ones wear the accent). */
+  background: var(--strip-idle-bg, var(--bg-surface));
+  color: var(--strip-idle-fg, var(--fg-3)); cursor: pointer; flex: none;
 }
 .project-strip-btn:hover { filter: brightness(1.08); }
-.project-strip-btn.active { border-color: var(--fg); }
+.project-strip-btn.active {
+  border-color: var(--fg);
+  background: var(--ps-bg, var(--accent));
+  color: var(--ps-ink, var(--bg-window));
+}
 .project-strip-btn:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 1px;
 }
@@ -36,6 +47,7 @@
 .project-strip-abbr {
   font-size: 11px; font-weight: 600; line-height: 1;
   color: inherit; letter-spacing: -0.02em;
+  max-width: 100%; overflow: hidden;
 }
 .project-strip-btn .tab-run-dot {
   position: absolute; right: -2px; top: -2px;
@@ -46,9 +58,50 @@
 .project-side {
   display: flex; flex-direction: column; min-height: 0;
 }
+/* Project info card: name, home directory, open-in-explorer — the rail
+   cards' card language (`rail-card glass` in the class list), inset from
+   the panel edges like a card, not a full-bleed strip. The tint washes
+   the theme's own accent in from the top-left and fades out, so every
+   theme tints the card differently without a per-theme token. */
+.rail-card.pside-project {
+  margin: 4px;
+  background:
+    linear-gradient(160deg, var(--accent-soft), transparent 60%),
+    linear-gradient(180deg,
+      color-mix(in oklab, var(--bg-elevated) 80%, transparent),
+      color-mix(in oklab, var(--bg-surface) 90%, transparent));
+}
+.pside-project-head {
+  display: flex; align-items: center; gap: 6px;
+}
+.pside-project-name {
+  flex: 1; min-width: 0;
+  font-size: var(--d-text-sm); font-weight: 600; color: var(--fg-1);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pside-project-path {
+  font-size: var(--d-text-xs); color: var(--fg-4);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding-left: 1px;
+}
+/* Icon-only opener at the head's right edge (same quiet box as the folds'
+   header buttons). */
+.pside-project-open {
+  appearance: none; border: 0; background: transparent; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; padding: 0; border-radius: var(--r-1);
+  color: var(--fg-4); cursor: pointer;
+}
+.pside-project-open:hover { color: var(--fg-2); background: var(--bg-hover); }
+.pside-project-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 0; }
 .pside-fold {
   display: flex; flex-direction: column; min-height: 0; flex: none;
   border-bottom: 1px solid var(--line-soft);
+}
+/* The separator between the info card and the first fold — only while the
+   card is actually shown (`.has-card`, no project = no card = no line). */
+.project-side.has-card > .pside-fold:first-of-type {
+  border-top: 1px solid var(--line-soft);
 }
 .pside-fold.grow { flex: 1; min-height: 120px; }
 .pside-fold.closed { flex: none; }

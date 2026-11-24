@@ -89,6 +89,13 @@ check("flatten: changedOnly hides ignored paths and they count no changes", () =
   assert.equal(allFilesTree.changed, 1);
 });
 
+check("isTreeLeaf: files, ignored dirs and empty nested-repo boundaries are inert", () => {
+  assert.equal(G.isTreeLeaf(file("a.txt")), true);
+  assert.equal(G.isTreeLeaf(dir("ignored", [], "Ignored")), true);
+  assert.equal(G.isTreeLeaf(dir("submodule", [])), true);
+  assert.equal(G.isTreeLeaf(dir("src", [file("src/a.rs")])), false);
+});
+
 // ── changedDirs / ancestorDirs ───────────────────────────────────────────────
 
 check("changedDirs: every dir with a change below it, nested ones too, never the root", () =>
@@ -226,6 +233,27 @@ check("absolutePath: /, \\ and drive prefixes are already absolute", () => {
 check("absolutePath: no project leaves the path as it is", () => {
   assert.equal(G.absolutePath(null, "src/a.js"), "src/a.js");
   assert.equal(G.absolutePath("", "src/a.js"), "src/a.js");
+});
+
+// ── formatSize ────────────────────────────────────────────────────────────────
+
+check("formatSize: bytes stay exact, larger units take a compact form", () => {
+  assert.equal(G.formatSize(0), "0 B");
+  assert.equal(G.formatSize(1), "1 B");
+  assert.equal(G.formatSize(999), "999 B");
+  assert.equal(G.formatSize(1024), "1 KB");
+  assert.equal(G.formatSize(9728), "9.5 KB");
+  assert.equal(G.formatSize(12288), "12 KB");
+  assert.equal(G.formatSize(1024 * 1024), "1 MB");
+  assert.equal(G.formatSize(1.5 * 1024 * 1024), "1.5 MB");
+  assert.equal(G.formatSize(3.4 * 1024 ** 3), "3.4 GB");
+});
+
+check("formatSize: no value reads as the next unit; junk is empty", () => {
+  // Just under the KB boundary: rounding must not show "1024 KB".
+  assert.equal(G.formatSize(1024 * 1024 - 1), "1023 KB");
+  assert.equal(G.formatSize(-5), "");
+  assert.equal(G.formatSize(Number.NaN), "");
 });
 
 // ── branchMatches ─────────────────────────────────────────────────────────────

@@ -166,6 +166,18 @@ pub struct RevealTarget {
 /// existing ancestor folder inside the project — a stale tree row still
 /// reveals where its file was — with nothing to select inside it.
 pub fn reveal_target(root: &Path, path: &str) -> Result<RevealTarget, String> {
+    // The project folder itself (the side panel's project card): open it,
+    // nothing to select. "." cannot go through the relative-path pipeline —
+    // Rust's path components normalise it away and the parent check would
+    // land on the drive root.
+    if path.is_empty() || path == "." {
+        let canonical_root =
+            std::fs::canonicalize(root).map_err(|e| format!("failed to resolve project: {e}"))?;
+        return Ok(RevealTarget {
+            folder: canonical_root,
+            file: None,
+        });
+    }
     let rel = crate::git_browser::project_relative(root, path)?;
     let canonical_root =
         std::fs::canonicalize(root).map_err(|e| format!("failed to resolve project: {e}"))?;
@@ -372,6 +384,16 @@ mod tests {
         );
         // Every ancestor gone too: the project folder.
         let target = reveal_target(dir.path(), "deep/tree/leaf.rs").unwrap();
+        let RevealTarget { file, folder } = target;
+        assert_eq!((file, folder), (None, dir.path().canonicalize().unwrap()));
+    }
+
+    #[test]
+    fn reveal_of_the_project_root_opens_the_folder_itself() {
+        // The project info card's open-in-explorer sends ".": the request
+        // collapses onto the project folder — open it, nothing to select.
+        let dir = project("reveal-root");
+        let target = reveal_target(dir.path(), ".").unwrap();
         let RevealTarget { file, folder } = target;
         assert_eq!((file, folder), (None, dir.path().canonicalize().unwrap()));
     }

@@ -32,7 +32,7 @@ Every command takes `path` (the tab's project folder, as the `workspace_*` comma
 
 Reading a work-tree file through git's filter pipeline — status hashing a file whose stat data changed, the file view's worktree side — runs the command of any `filter.<name>.clean`/`process` driver the file's attributes select. gix trusts a repository's own config as soon as the user owns it, and a downloaded or extracted repository is owned by the user, so its `.git/config` could make a mere preview run a command. `open` therefore removes, in memory, every `filter` section whose source is the repository (`.git/config`, `config.worktree`, and files they include). Drivers from the user's, the system's and the environment's config stay (`git lfs install` writes the global one): those commands are the user's own choice, as they are for `git status`. The built-in conversions (`core.autocrlf`, `eol`/`text`, `ident`, `working-tree-encoding`) run no command and are unaffected. A repository driver that is gone leaves its paths unconverted: an LFS setup made with `git lfs install --local` shows the worktree content against the pointer blob.
 
-Submodules are opened by gix from their own config, which `open` never sees, so status does not descend into them: a submodule is `Modified` when it has a different commit checked out (gix `Submodule::Given { ignore: Dirty }`), never for edits inside its work tree.
+Submodules are opened by gix from their own config, which `open` never sees, so status does not descend into them: a submodule is `Modified` when it has a different commit checked out (gix `Submodule::Given { ignore: Dirty }`), never for edits inside its work tree. A checked-out gitlink remains a **directory boundary** in the parent tree (directory styling, parent status, no file preview and no expansion): its disk path is a directory even though the parent index records one `160000` entry. Open that folder as its own project to browse it; never make the parent tree recurse into its config or files.
 
 The drivers that stay, and the `git` gix runs once to find its installation config, are children of the app: every command holds the spawn gate (`spawn_gate::shared`, the guard `open` returns) for as long as it reads, so none starts while a Chromium launch has its CDP pipe ends in reach of a child (`docs/architecture/browser.md`). A Chromium launch waits for the reads in flight; other spawns do not wait behind it.
 
@@ -48,6 +48,7 @@ git_browser_status(path, allFiles?) -> StatusView
                head: Option<String> /* full sha; None = unborn */, ahead: Option<u32>, behind: Option<u32> /* None = no upstream */ }
   TreeNode   { name, path /* project-relative, "/"-separated, "" for the root */, dir: bool,
                status: Option<StatusKind>, changed: u32 /* changed files below a dir; 0 for files */,
+               size: Option<u64> /* a file's work-tree size; None for dirs, deleted files and a commit's tree */,
                children: Vec<TreeNode> /* dirs first, then files, each alphabetical; empty for files */ }
   StatusKind = "Modified" | "Added" | "Deleted" | "Renamed" | "Untracked" | "Ignored"   (git_browser::StatusKind)
 
@@ -95,6 +96,8 @@ With `allFiles`, the tree also carries the ignored paths, from a gix dirwalk (`r
 Rename detection between HEAD and the index follows the repo's config (`status.renames` / `diff.renames`, on unless the user turned it off); between the index and the work tree there is none, as in `git status`, so an unstaged `mv` shows the old path as `Deleted` and the new one as `Untracked`. A detected rename shows only on its new path; the old path is not in the tree.
 
 `changed` on the root and on each dir counts the changed files below it. More than `MAX_FILES` (20 000) files: the tree stops there and `truncated` is `true`. Changed files are always kept; of the unchanged ones, those under the asked-for folder (`path`, as `StatusView.folder` places it) come first, so a subfolder tab's files survive the cap (the files panel shows only that folder).
+
+Each file row carries its work-tree `size` in bytes: an unchanged tracked file takes the index's stat size (status has just compared it with the disk, and this keeps the added cost at one syscall per *changed* file; skip-worktree, assume-valid and sizes the index cannot hold read the disk instead), a changed, untracked or ignored one stats the disk fresh. A deleted path has none, and neither has a row that is a directory on disk (a submodule's checkout or a nested repository). A commit's tree carries no sizes. The files pane renders it as a small grey tag before the status mark (`formatSize`: binary B/KB/MB/GB, one decimal below ten).
 
 ### Inline diff (`file.rs`)
 
@@ -147,6 +150,7 @@ Reads go through gix (0.87, default features: `status`, `blob-diff`, `revision`,
 - `hunkStarts(lines)` → the line indices the ↑↓ buttons jump between;
 - `splitPath(path)` → `[dir, name]`;
 - `relativeTime(atSecs, nowSecs)` → `now`, `5m`, `2h`, `3d`, `2w`, `4mo`, `1y`;
+- `formatSize(bytes)` → `812 B`, `9.5 KB`, `12 KB`, `1.2 MB`, `3.4 GB` (binary units, one decimal below ten);
 - `diffText(lines)` → the changed lines prefixed `+` / `-`, for the copy button (plain text, no markdown fence);
 - `firstFile(root, changedOnly)` → the first file in display order, selected on open when there is no `initialPath`;
 - `discardDeletes(status)` → whether discard removes the file outright (`Untracked`, `Added`, `Renamed`: no HEAD blob to restore) — the discard confirmation rule;

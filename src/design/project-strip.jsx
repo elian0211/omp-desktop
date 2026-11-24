@@ -66,22 +66,24 @@ function ProjectStrip({
             : null;
           // The strip icon's colour: the modal's display-only `icon` field,
           // else the Settings row's per-project accent (which rethemes the
-          // rendered tab too), else the muted default.
-          const accent = appearance?.icon || appearance?.accent || "var(--fg-4)";
+          // rendered tab too), else the theme accent.
+          const picked = appearance?.icon || appearance?.accent || null;
+          const accent = picked || "var(--accent)";
           const tip = [
             appearance?.label,
             group.path || group.name,
             profileLabel?.(group.profile),
           ].filter(Boolean).join("\n");
           const abbr = _psAbbr(appearance?.label || group.name, 2);
-          // A picked colour (the modal's `icon`, or the Settings accent) is
-          // used at full strength with the ink that reads on it; the default
-          // keeps the muted mix with its own colours.
-          const style = appearance?.icon || appearance?.accent
+          // The project's own colour shows only while it is active, at full
+          // strength with the ink that reads on it (an unpicked project
+          // wears the theme accent, `inkFor` leaves the CSS fallback in
+          // place). Inactive buttons all keep the uniform theme-accent mix
+          // from the stylesheet — no per-project colour leaks there.
+          const style = active
             ? {
-              "--ps-accent": accent,
               "--ps-bg": accent,
-              "--ps-ink": window.OMP_PROJECT_APPEARANCE.inkFor(accent),
+              "--ps-ink": picked ? window.OMP_PROJECT_APPEARANCE.inkFor(picked) : undefined,
             }
             : undefined;
           return (

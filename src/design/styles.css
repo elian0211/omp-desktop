@@ -59,6 +59,10 @@
   --accent-soft: rgba(138, 240, 200, 0.12);
   --accent-glow: rgba(138, 240, 200, 0.45);
 
+  /* project strip's inactive chip: quiet, never competes with the accent */
+  --strip-idle-bg: #1A1F2E;
+  --strip-idle-fg: #8A91A6;
+
   --magenta: #FF7AC6;
   --cyan: #6EE7FF;
   --amber: #FFC56E;
@@ -111,6 +115,10 @@
   --accent-soft: rgba(196, 255, 63, 0.14);
   --accent-glow: rgba(196, 255, 63, 0.5);
 
+  /* project strip's inactive chip: quiet, never competes with the accent */
+  --strip-idle-bg: #0B1A12;
+  --strip-idle-fg: #4F9C49;
+
   --magenta: #FF6EAA;
   --cyan: #58F0E0;
   --amber: #FFD24A;
@@ -158,6 +166,10 @@
   --accent-deep: #145C3D;
   --accent-soft: rgba(31, 138, 91, 0.12);
   --accent-glow: rgba(31, 138, 91, 0.4);
+
+  /* project strip's inactive chip: quiet, never competes with the accent */
+  --strip-idle-bg: #ECE6D5;
+  --strip-idle-fg: #5E6478;
 
   --magenta: #C2438C;
   --cyan: #1F7A8C;
@@ -210,6 +222,10 @@
   --accent-deep: #005A9E;
   --accent-soft: rgba(0, 122, 204, 0.10);
   --accent-glow: rgba(0, 122, 204, 0.35);
+
+  /* project strip's inactive chip: quiet, never competes with the accent */
+  --strip-idle-bg: #EDEDED;
+  --strip-idle-fg: #616161;
 
   --magenta: #B750D6;
   --cyan: #2B91AF;
@@ -317,6 +333,10 @@
   --accent-deep: #2A7A4E;
   --accent-soft: rgba(61, 148, 99, 0.10);
   --accent-glow: rgba(61, 148, 99, 0.30);
+
+  /* project strip's inactive chip: quiet, never competes with the accent */
+  --strip-idle-bg: #E9F1E8;
+  --strip-idle-fg: #66735F;
 
   --magenta: #B750D6;
   --cyan: #2B91AF;

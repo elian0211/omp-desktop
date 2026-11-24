@@ -222,6 +222,36 @@ fn under(path: &str, prefix: &str) -> bool {
     }
 }
 
+/// The size a file row shows: the plain file's size on disk. `None` for
+/// anything else — a directory (a submodule's checkout or a nested
+/// repository), a deleted or unreadable path. A symlink reports its
+/// target's path length, like `ls -l`.
+fn disk_size(work_dir: &Path, rel: &str) -> Option<u64> {
+    let meta = std::fs::symlink_metadata(work_dir.join(rel)).ok()?;
+    (!meta.is_dir()).then_some(meta.len())
+}
+
+/// The size of an unchanged tracked file from the index's stat data:
+/// status has just compared it with the disk, so it matches, and the
+/// added cost of sizes stays at one syscall per *changed* file. Sparse
+/// entries (skip-worktree, assume-valid: the disk is not the index's
+/// copy) and sizes the index cannot hold (`0`: over 4 GiB, or no stat
+/// data) read the disk instead.
+fn tracked_size(index: &gix::index::State, work_dir: &Path, rel: &str) -> Option<u64> {
+    use gix::index::entry::Flags;
+    match index.entry_by_path(gix::bstr::BStr::new(rel)) {
+        Some(entry)
+            if !entry
+                .flags
+                .intersects(Flags::SKIP_WORKTREE | Flags::ASSUME_VALID)
+                && entry.stat.size != 0 =>
+        {
+            Some(u64::from(entry.stat.size))
+        }
+        _ => disk_size(work_dir, rel),
+    }
+}
+
 /// The ignored paths of the work tree, from gix's dirwalk: files and
 /// symlinks as themselves, an ignored directory collapsed to the directory
 /// (its whole content is ignored; not walked, so it stays cheap on a big
@@ -312,7 +342,27 @@ pub fn status(path: &Path, all_files: bool) -> Result<StatusView, String> {
     } else {
         Vec::new()
     };
-    let tree = fold(files, ignored_dirs);
+    let tree = fold(
+        files.into_iter().map(|(path, kind)| {
+            // Unchanged tracked files take the index's stat size; changed,
+            // untracked and ignored ones stat fresh (a deleted path and a
+            // row that is a directory on disk have no size). A gitlink is
+            // represented in the index as one path but its checkout is a
+            // directory: show that boundary as a directory without walking
+            // into the nested repository.
+            let nested_dir = work_dir.join(&path).is_dir();
+            let size = if nested_dir {
+                None
+            } else {
+                match kind {
+                    None => tracked_size(&index, &work_dir, &path),
+                    Some(_) => disk_size(&work_dir, &path),
+                }
+            };
+            (path, kind, size, nested_dir)
+        }),
+        ignored_dirs,
+    );
     let head = repo.head_id().ok().map(gix::Id::detach);
     let head_name = repo.head_name().map_err(fail("failed to read HEAD"))?;
     let (ahead, behind) = match (head, &head_name) {
@@ -342,27 +392,34 @@ pub fn status(path: &Path, all_files: bool) -> Result<StatusView, String> {
 #[derive(Default)]
 struct Dir {
     dirs: BTreeMap<String, Self>,
-    files: BTreeMap<String, Option<StatusKind>>,
+    files: BTreeMap<String, (Option<StatusKind>, Option<u64>, bool)>,
     /// Set when this directory itself is an ignored one collapsed by the
     /// dirwalk (shown with [`StatusKind::Ignored`], never expanded).
     ignored: bool,
 }
 
 impl Dir {
-    fn insert(&mut self, path: &str, status: Option<StatusKind>) {
+    fn insert(
+        &mut self,
+        path: &str,
+        status: Option<StatusKind>,
+        size: Option<u64>,
+        nested_dir: bool,
+    ) {
         match path.split_once('/') {
             // Look up first: `entry` would allocate the key for every
             // segment of every file, not once per directory.
             Some((head, rest)) => match self.dirs.get_mut(head) {
-                Some(dir) => dir.insert(rest, status),
+                Some(dir) => dir.insert(rest, status, size, nested_dir),
                 None => self
                     .dirs
                     .entry(head.to_string())
                     .or_default()
-                    .insert(rest, status),
+                    .insert(rest, status, size, nested_dir),
             },
             None => {
-                self.files.insert(path.to_string(), status);
+                self.files
+                    .insert(path.to_string(), (status, size, nested_dir));
             }
         }
     }
@@ -389,12 +446,13 @@ impl Dir {
             changed += node.changed;
             children.push(node);
         }
-        for (name, status) in self.files {
+        for (name, (status, size, nested_dir)) in self.files {
             changed += u32::from(status.is_some_and(StatusKind::is_change));
             children.push(TreeNode {
                 path: join(&path, &name),
                 name,
-                dir: false,
+                dir: nested_dir,
+                size,
                 status,
                 changed: 0,
                 children: Vec::new(),
@@ -404,6 +462,7 @@ impl Dir {
             name,
             path,
             dir: true,
+            size: None,
             status: self.ignored.then_some(StatusKind::Ignored),
             changed,
             children,
@@ -421,17 +480,18 @@ fn join(dir: &str, name: &str) -> String {
 
 /// Fold `/`-separated project-relative file paths into a tree rooted at
 /// `""`: directories first, then files, each in byte order; every
-/// directory's `changed` counts the files with a change below it.
-/// `ignored_dirs` are paths of ignored directories collapsed by the
-/// dirwalk: they become empty child dirs whose `status` is
-/// [`StatusKind::Ignored`].
+/// directory's `changed` counts the files with a change below it. Each
+/// file carries its status and the size shown beside it
+/// ([`disk_size`], [`tracked_size`]). `ignored_dirs` are paths of
+/// ignored directories collapsed by the dirwalk: they become empty
+/// child dirs whose `status` is [`StatusKind::Ignored`].
 pub(super) fn fold(
-    files: impl IntoIterator<Item = (String, Option<StatusKind>)>,
+    files: impl IntoIterator<Item = (String, Option<StatusKind>, Option<u64>, bool)>,
     ignored_dirs: Vec<String>,
 ) -> TreeNode {
     let mut root = Dir::default();
-    for (path, status) in files {
-        root.insert(&path, status);
+    for (path, status, size, nested_dir) in files {
+        root.insert(&path, status, size, nested_dir);
     }
     for path in ignored_dirs {
         root.insert_ignored_dir(&path);
@@ -555,12 +615,27 @@ mod tests {
     fn fold_puts_dirs_first_then_files_and_counts_changes() {
         let tree = fold(
             [
-                ("z.txt".to_string(), None),
-                ("src/b.rs".to_string(), Some(StatusKind::Modified)),
-                ("src/a/x.rs".to_string(), Some(StatusKind::Added)),
-                ("src/a/y.rs".to_string(), None),
-                ("a.txt".to_string(), Some(StatusKind::Untracked)),
-                ("docs/readme.md".to_string(), None),
+                ("z.txt".to_string(), None, None, false),
+                (
+                    "src/b.rs".to_string(),
+                    Some(StatusKind::Modified),
+                    Some(3),
+                    false,
+                ),
+                (
+                    "src/a/x.rs".to_string(),
+                    Some(StatusKind::Added),
+                    Some(5),
+                    false,
+                ),
+                ("src/a/y.rs".to_string(), None, None, false),
+                (
+                    "a.txt".to_string(),
+                    Some(StatusKind::Untracked),
+                    Some(1),
+                    false,
+                ),
+                ("docs/readme.md".to_string(), None, None, false),
             ],
             Vec::new(),
         );
@@ -570,7 +645,10 @@ mod tests {
         assert_eq!(tree.changed, 3);
 
         let docs = &tree.children[0];
-        assert_eq!((docs.path.as_str(), docs.changed), ("docs", 0));
+        assert_eq!(
+            (docs.path.as_str(), docs.changed, docs.size),
+            ("docs", 0, None)
+        );
         let src = &tree.children[1];
         assert_eq!(names(src), ["a", "b.rs"]);
         assert_eq!(src.changed, 2);
@@ -579,12 +657,27 @@ mod tests {
         let x = &a.children[0];
         assert_eq!(x.path, "src/a/x.rs");
         assert_eq!(
-            (x.dir, x.status, x.changed),
-            (false, Some(StatusKind::Added), 0)
+            (x.dir, x.status, x.changed, x.size),
+            (false, Some(StatusKind::Added), 0, Some(5))
         );
         assert_eq!(x.children.len(), 0);
         let top_file = &tree.children[2];
         assert_eq!(top_file.path, "a.txt");
+    }
+
+    #[test]
+    fn fold_keeps_a_nested_repository_as_an_empty_directory_boundary() {
+        let tree = fold(
+            [("sub".to_string(), Some(StatusKind::Modified), None, true)],
+            Vec::new(),
+        );
+        let sub = &tree.children[0];
+        assert_eq!(sub.path, "sub");
+        assert!(sub.dir);
+        assert_eq!(sub.status, Some(StatusKind::Modified));
+        assert_eq!(sub.size, None);
+        assert!(sub.children.is_empty());
+        assert_eq!(tree.changed, 1);
     }
 
     fn find<'a>(node: &'a TreeNode, path: &str) -> Option<&'a TreeNode> {
@@ -656,6 +749,48 @@ mod tests {
             .repo
             .name
             .starts_with("omp-git-browser-test-status-kinds"));
+    }
+
+    #[test]
+    fn status_attaches_work_tree_sizes_to_files() {
+        let Some(repo) = fixture::init("status-sizes") else {
+            return;
+        };
+        let keep = "keep\n".repeat(30);
+        let big = "0123456789".repeat(5000);
+        repo.write("keep.txt", &keep);
+        repo.write("big.txt", &big);
+        repo.write("gone.txt", "gone\n");
+        repo.write("dir/nested.txt", "nested\n");
+        repo.git(&["add", "."]);
+        repo.commit("init", 1_700_000_000);
+
+        repo.write("big.txt", &big.repeat(2));
+        std::fs::remove_file(repo.path().join("gone.txt")).expect("delete tracked file");
+        repo.write("fresh/untracked.txt", "u\n");
+
+        let disk = |rel: &str| {
+            std::fs::metadata(repo.path().join(rel))
+                .map(|m| m.len())
+                .ok()
+        };
+        let view = status(repo.path(), false).expect("status");
+        let tree = &view.tree;
+        // An unchanged tracked file takes the index's stat size, which
+        // matches the disk; a changed or untracked one stats fresh.
+        assert_eq!(
+            find(tree, "keep.txt").and_then(|n| n.size),
+            disk("keep.txt")
+        );
+        assert_eq!(find(tree, "big.txt").and_then(|n| n.size), disk("big.txt"));
+        assert_eq!(
+            find(tree, "fresh/untracked.txt").and_then(|n| n.size),
+            disk("fresh/untracked.txt")
+        );
+        // A deleted path has no size, and neither has a directory.
+        assert_eq!(find(tree, "gone.txt").and_then(|n| n.size), None);
+        assert_eq!(find(tree, "dir").and_then(|n| n.size), None);
+        assert_eq!(tree.size, None);
     }
 
     #[test]
@@ -778,7 +913,10 @@ mod tests {
             "moved",
         ]);
         let view = status(outer.path(), false).expect("status");
-        assert_eq!(status_of(&view.tree, "sub"), Some(StatusKind::Modified));
+        let sub = find(&view.tree, "sub").expect("submodule row");
+        assert_eq!(sub.status, Some(StatusKind::Modified));
+        assert!(sub.dir, "a checked-out gitlink is a directory boundary");
+        assert!(sub.children.is_empty(), "status must not descend into it");
     }
 
     #[test]

@@ -80,6 +80,11 @@ pub fn commit(path: &Path, sha: &str) -> Result<CommitView, String> {
         Some((
             change.location().to_str_lossy().into_owned(),
             Some(kind(change)?),
+            // A commit's tree carries no size: sizes are the work tree's.
+            None,
+            // Commit trees are never inspected against the current disk;
+            // a gitlink stays one tree entry here.
+            false,
         ))
     });
     let files: Vec<_> = touched.by_ref().take(MAX_FILES).collect();

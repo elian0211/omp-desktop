@@ -3,7 +3,7 @@
    activity views — both folds can be open. */
 
 const { Icon: _PSideIcon, TabRunDot: _PSideDot, RenameField: _PSideRename, FilesView } = window;
-const { membersNewestFirst: _psMembers } = window.OMP_PROJECT_NAV;
+const { membersNewestFirst: _psMembers, basename: _psBase } = window.OMP_PROJECT_NAV;
 
 /** The side panel's no-content hint (a fold with nothing to show yet). */
 function SidePanelStub({ title, hint }) {
@@ -153,9 +153,31 @@ function ProjectSessionsFold({
   );
 }
 
+/** Project info card at the top of the side panel: name, home directory
+ *  and an open-in-explorer button (`onReveal(".")` collapses onto the
+ *  project folder itself — project_file.rs opens it, nothing to select).
+ *  Same card language as the rail cards (`rail-card glass`). */
+function ProjectInfoCard({ group, projectLabel, onReveal }) {
+  if (!group?.path) return null;
+  const name = projectLabel || _psBase(group.path);
+  return (
+    <div className="pside-project rail-card glass">
+      <div className="pside-project-head">
+        <span className="pside-project-name" title={name}>{name}</span>
+        <button type="button" className="pside-project-open" title={OMP_TR("open in explorer")}
+          aria-label={OMP_TR("open in explorer")}
+          onClick={e => { e.stopPropagation(); onReveal("."); }}>
+          <_PSideIcon name="folder" size={11} />
+        </button>
+      </div>
+      <div className="pside-project-path mono" title={group.path}>{group.path}</div>
+    </div>
+  );
+}
+
 function ProjectSide({
   open, folds, onToggleFold,
-  group, activeId, noTab,
+  group, activeId, noTab, projectLabel,
   onSelectTab, onCloseTab, onRenameTab, onNewInProject, onReorder,
   onArchiveSession, onDeleteSession,
   files, onOpenFile, onReference, onReveal,
@@ -165,7 +187,8 @@ function ProjectSide({
   const [filterOpen, setFilterOpen] = React.useState(false);
   if (!open) return null;
   return (
-    <div className="side-panel project-side" role="region" aria-label={OMP_TR("Project side")}>
+    <div className={`side-panel project-side${group?.path ? " has-card" : ""}`} role="region" aria-label={OMP_TR("Project side")}>
+      <ProjectInfoCard group={group} projectLabel={projectLabel} onReveal={onReveal} />
       <_PSideFold id="sessions" title={OMP_TR("Sessions")} open={folds.sessions !== false}
         onToggle={onToggleFold}
         extra={group?.path && (
@@ -207,4 +230,4 @@ function ProjectSide({
   );
 }
 
-Object.assign(window, { ProjectSide, ProjectSessionsFold, SidePanelStub });
+Object.assign(window, { ProjectSide, ProjectSessionsFold, ProjectInfoCard, SidePanelStub });

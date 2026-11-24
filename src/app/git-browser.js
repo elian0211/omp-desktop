@@ -8,14 +8,17 @@
 // directories to open so every change is in view (`changedDirs`,
 // `ancestorDirs`), the name filter (`filterFiles`), the first file to select
 // (`firstFile`), hunk navigation (`hunkStarts`), the copy-diff text
-// (`diffText`), compact commit ages (`relativeTime`), the discard
+// (`diffText`), compact commit ages (`relativeTime`), compact file sizes
+// (`formatSize`), the discard
 // confirmation rule (`discardDeletes`), the refresh trigger counting
 // finished edit/write tool cards (`finishedEdits`), an edit card's path made
 // absolute (`absolutePath`) and the branch picker's filtered rows
 // (`branchMatches`).
 //
-// A tree node is Rust's `TreeNode`: `{ name, path, dir, status, changed,
-// children }`, children dirs first then files, `status` null when unchanged.
+// A tree node is Rust's `TreeNode`: `{ name, path, dir, size, status,
+// changed, children }`, children dirs first then files, `status` null
+// when unchanged, `size` set on plain files (work-tree bytes; null on
+// directories, deleted files and a commit's tree).
 //
 // Exposes `window.OMP_GIT_BROWSER`; IIFE per AGENTS.md. Pure and
 // dependency-free (tests/test-git-browser.mjs).
@@ -95,6 +98,15 @@
     return root ? walk(root) : null;
   }
 
+  /** A tree row that must not offer expansion: ordinary files, ignored
+   *  directories collapsed by the dirwalk, and a checked-out gitlink /
+   *  nested repository boundary. The latter is a real directory on disk,
+   *  but the parent repository deliberately does not descend into its
+   *  separate config and work tree. */
+  function isTreeLeaf(node) {
+    return !node.dir || node.status === "Ignored" || node.children.length === 0;
+  }
+
   /** Index of the first line of every run of changed lines. */
   function hunkStarts(lines) {
     const starts = [];
@@ -130,6 +142,21 @@
     if (days < 30) return `${Math.floor(days / 7)}w`;
     if (days < 365) return `${Math.floor(days / 30)}mo`;
     return `${Math.floor(days / 365)}y`;
+  }
+
+  /** A file size in bytes as a compact string: "812 B", "9.5 KB", "12 KB",
+   *  "1.2 MB", "3.4 GB". Binary units (1024); one decimal below ten, none
+   *  from ten up, never a trailing ".0" and never a value that reads as
+   *  the next unit ("1023 KB" at the top of a unit's range). */
+  function formatSize(bytes) {
+    if (!Number.isFinite(bytes) || bytes < 0) return "";
+    const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+    let v = bytes;
+    let u = 0;
+    while (v >= 1024 && u < units.length - 1) { v /= 1024; u++; }
+    const n = u === 0 ? v : v >= 10 ? Math.min(1023, Math.round(v)) : v.toFixed(1);
+    const s = String(n);
+    return `${s.endsWith(".0") ? s.slice(0, -2) : s} ${units[u]}`;
   }
 
   /** The changed lines of a `FileView`, one per line prefixed `+`/`-`, for
@@ -188,7 +215,7 @@
 
   window.OMP_GIT_BROWSER = {
     flatten, changedDirs, ancestorDirs, filterFiles, firstFile, hunkStarts,
-    splitPath, relativeTime, diffText, discardDeletes, finishedEdits, absolutePath,
-    MAX_BRANCH_ROWS, branchMatches,
+    splitPath, relativeTime, formatSize, diffText, discardDeletes, finishedEdits, absolutePath,
+    isTreeLeaf, MAX_BRANCH_ROWS, branchMatches,
   };
 })();

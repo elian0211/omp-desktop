@@ -436,6 +436,7 @@ window.OMP_I18N.add("zh", {
   "session tools": "会话工具",
   "rail widgets": "侧栏小组件",
   "Explorer": "资源管理器",
+  "open in explorer": "在资源管理器中打开",
   "changed files": "变更",
   "project files": "项目",
   "repository files": "仓库",

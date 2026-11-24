@@ -114,6 +114,11 @@ pub struct TreeNode {
     /// Project-relative, `/`-separated; `""` for the root.
     pub path: String,
     pub dir: bool,
+    /// A file's work-tree size in bytes; `None` for a directory, a
+    /// deleted file and a commit's tree (sizes are the work tree's, not
+    /// a commit's). The files pane shows it as a small grey tag before
+    /// the status mark.
+    pub size: Option<u64>,
     pub status: Option<StatusKind>,
     /// Changed files below a directory; `0` for files.
     pub changed: u32,

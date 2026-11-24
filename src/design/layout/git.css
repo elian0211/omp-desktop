@@ -113,6 +113,12 @@
 .gitb-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .gitb-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); flex: none; margin-right: 4px; }
 .gitb-mark { width: 12px; text-align: center; font-size: 10px; font-weight: 600; flex: none; }
+/* A file's work-tree size as a small grey tag before the status mark. */
+.gitb-size {
+  flex: none; padding: 0 5px; border-radius: 7px;
+  font-size: 10px; line-height: 14px; font-weight: 500;
+  color: var(--fg-4); background: color-mix(in oklab, var(--fg-4) 14%, transparent);
+}
 
 /* ── File view ──────────────────────────────────────────────────────────── */
 .gitb-view-head { gap: 10px; }

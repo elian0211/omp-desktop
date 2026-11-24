@@ -32,6 +32,7 @@ mod omp_native_config;
 mod omp_update;
 mod open_tabs;
 mod pr_automation;
+mod preview_watcher;
 mod private_fs;
 mod profiles;
 mod program_setting;
@@ -1846,6 +1847,7 @@ fn with_plugins_and_state(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder
         })
         .manage(AgentBridge::new())
         .manage(GitWatcherState::new())
+        .manage(preview_watcher::PreviewWatchState::new())
         .manage(OpenProjectState::new())
         .manage(updater::UpdaterState::default())
         .manage(CloseGuard::default())
@@ -1911,6 +1913,8 @@ pub fn run() {
             take_pending_open_projects,
             start_git_watch,
             stop_git_watch,
+            preview_watch_start,
+            preview_watch_stop,
             open_url_external,
             list_saved_sessions,
             conversation_tree,

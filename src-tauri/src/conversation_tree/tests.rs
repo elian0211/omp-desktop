@@ -783,7 +783,8 @@ fn children_of_lists_the_files_forked_from_a_conversation() {
         family::children_of(&fx.dir, "child-path.jsonl").unwrap(),
         ["grandchild.jsonl"]
     );
-    assert!(family::children_of(&fx.dir, "leaf.jsonl")
-        .unwrap()
-        .is_empty());
+    assert_eq!(
+        family::children_of(&fx.dir, "leaf.jsonl").unwrap(),
+        Vec::<String>::new()
+    );
 }

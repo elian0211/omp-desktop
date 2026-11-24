@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **Setup guide when omp is missing**: if the boot check finds no `omp` binary on the trusted PATH (`omp_locate`, new), a modal explains it and offers the official install one-liner for the OS plus the npm command — each one click to copy — and an "official website" button that opens omp.sh in the default browser. "Check again" re-resolves immediately: installs take effect without restarting the app.
+- The Explorer's file tree and the git browser's files pane show each file's **size** as a small grey tag before its git status mark — compact binary units (`812 B`, `9.5 KB`, `12 KB`, `1.2 MB`). Unchanged tracked files take the size from the index, changed and untracked ones stat the disk; deleted files, directories and a browsed commit's tree show none.
 - The status bar shows the installed **omp** version beside the desktop version. Click it (or Settings → Session → Version → Check omp) to run `omp update --check`; a newer release lights a pill and opens a panel that copies `omp update` for a terminal — the desktop never installs omp itself. Background checks share the existing “Check for updates” toggle.
 - The file preview follows the file **live**: while a preview is open the app watches it (the preview's own path checks, parent-directory watch) and silently re-reads on every change — the agent's edits and your editor's saves alike, debounced; the shown text stays until the fresh read lands.
 

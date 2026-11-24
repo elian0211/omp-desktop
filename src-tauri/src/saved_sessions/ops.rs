@@ -33,8 +33,7 @@ use super::sessions_root_dir;
 fn artifacts_dir_of(file: &Path) -> PathBuf {
     let text = file.to_string_lossy();
     let stripped = match (text.strip_suffix(".gz"), text.strip_suffix(".jsonl")) {
-        (Some(stem), _) => stem.to_owned(),
-        (None, Some(stem)) => stem.to_owned(),
+        (Some(stem), _) | (None, Some(stem)) => stem.to_owned(),
         (None, None) => text.into_owned(),
     };
     PathBuf::from(stripped)
@@ -84,10 +83,8 @@ fn archive_destinations(
     let mut name = relative.as_os_str().to_owned();
     name.push(".gz");
     let destination = archive_root.join(name);
-    let legacy = match destination.to_string_lossy().strip_suffix(".gz") {
-        Some(stripped) => PathBuf::from(stripped),
-        None => unreachable!(".gz was just appended"),
-    };
+    // The same path without `.gz`, which we just appended.
+    let legacy = destination.with_extension("");
     Ok((destination, legacy))
 }
 
