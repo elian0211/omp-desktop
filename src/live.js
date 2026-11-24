@@ -1332,6 +1332,9 @@
     if (window.__TAURI__) {
       stopped = window.__TAURI__.core.invoke("stop_session", { sessionId: id }).catch(() => {});
       window.__TAURI__.core.invoke("stop_git_watch", { sessionId: id }).catch(() => {});
+      // An open preview's watch dies with its unmount effect; this catches
+      // the session-level leftovers (a webview reload mid-preview).
+      window.__TAURI__.core.invoke("preview_watch_stop", { sessionId: id, path: null }).catch(() => {});
     }
     _dropGitListener(id);
     sessionSnapshots.delete(id);
@@ -4428,6 +4431,28 @@
       if (!activeSessionId) return Promise.resolve(null);
       return _invokeResult("project_file_read", { sessionId: activeSessionId, path });
     },
+
+    /** Watch the file a preview shows while it stays open
+     *  (src-tauri/src/preview_watcher.rs): every change emits
+     *  `preview://changed` with `{sessionId, path}`. Same trust shape as
+     *  `readProjectFile`; an `Err` just means no live updates. */
+    watchProjectFile(path) {
+      if (!activeSessionId) return Promise.resolve(null);
+      return _invokeResult("preview_watch_start", { sessionId: activeSessionId, path });
+    },
+
+    /** Drop one watch (`path`) or every watch of the session (no path, the
+     *  session-stop path). Fire-and-forget: a leftover watcher only costs
+     *  its OS handle until the app exits. */
+    unwatchProjectFile(path) {
+      if (!activeSessionId) return Promise.resolve(null);
+      return window.__TAURI__.core
+        .invoke("preview_watch_stop", { sessionId: activeSessionId, path: path ?? null })
+        .catch(() => {});
+    },
+
+    /** `cb({sessionId, path})` whenever a watched preview file changes. */
+    onPreviewChanged(cb) { return _listen("preview://changed", p => cb(p ?? null)); },
 
     /** Reveal a file of the active tab's project in the OS file manager
      *  (the files panel's context menu): same `{ok, value | error}` shape

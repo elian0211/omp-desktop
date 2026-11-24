@@ -188,4 +188,14 @@ check("inRange", () => {
   assert.equal(P.inRange(1, null), false);
 });
 
+// ── live refresh (preview_watcher.rs events) ──────────────────────────────
+
+check("shouldNudge: the first event always nudges; bursts inside the window do not", () => {
+  assert.equal(P.shouldNudge(null, 1000), true);
+  assert.equal(P.shouldNudge(undefined, 1000), true);
+  // An event right after a nudge is part of the same editor-save burst.
+  assert.equal(P.shouldNudge(1000, 1000 + P.NUDGE_MIN_MS - 1), false);
+  assert.equal(P.shouldNudge(1000, 1000 + P.NUDGE_MIN_MS), true);
+});
+
 console.log(`file-preview: ${passed} checks passed`);

@@ -1453,7 +1453,7 @@ function App() {
             >
               {dock.tab === "file" ? (
                 preview && preview.key === planKey ? (
-                  <FilePreview target={preview.target} onClose={closePreview}
+                  <FilePreview target={preview.target} onClose={closePreview} sessionId={planKey}
                     onOpenGit={previewToGit} headless onMeta={setFileMeta} />
                 ) : (
                   <div className="dock-pane-stub">{OMP_TR("Open a file from the chat or the explorer.")}</div>

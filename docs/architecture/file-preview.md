@@ -2,6 +2,10 @@
 
 A read-only look at one project file: a read card's target or a file link in the agent's markdown. Text is highlighted with the read lines tinted. Images show whole. Sites are out of scope: http(s) links keep their routing (localhost to the browser panel, the rest to the system browser through `navigation_guard.rs`). Since the 2026-11-21 project-dock layout the preview renders **docked in the tool dock's File pane** — no modal scrim, the chat beside it stays usable; the old modal/lightbox presentation is retired.
 
+## Live refresh (`src-tauri/src/preview_watcher.rs`)
+
+While a preview is open the frontend calls `preview_watch_start` for the path and re-reads on `preview://changed` (`{sessionId, path}`), debounced (`app/file-preview.js` `shouldNudge`, `NUDGE_MIN_MS` 500 — one editor save emits several OS events). The refresh is silent: the old text stays until the re-read lands, no loading flash. `PreviewWatchState` (Tauri state, one `notify` watcher per session+path) watches the **parent directory** non-recursively like the git HEAD watcher — editors save through a rename over the target, which orphans a file-level watch — with `is_change` filtering sibling noise and notify 7's `Access(Open)` events (the preview's own re-read must not re-trigger). The path resolves through `preview_watcher::watch_target`, the preview's own trust checks (`git_browser::project_relative`, canonicalise, symlink/`.git` refusals), tolerant of a missing file so a recreated file is caught; the event payload names the path **as sent**, and the component matches on that plus the session. Cleanup: the component stops its watch on unmount or path change, and the session-stop path sends `preview_watch_stop` without a path (every watch of the session). Watcher errors surface as `{ok: false}` — the preview then simply doesn't update live.
+
 ## Entry points
 
 |Where|What opens|

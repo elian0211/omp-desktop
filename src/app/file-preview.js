@@ -194,8 +194,20 @@
     return !!el && el.scrollTop + el.clientHeight >= el.scrollHeight - 800;
   }
 
+  // ── Live refresh (preview_watcher.rs) ─────────────────────────────
+  // The watcher's events arrive per OS change; editors save in bursts
+  // (write + rename + metadata), and the agent may touch a file several
+  // times in one second. `shouldNudge` gates when a change may schedule a
+  // re-read, `NUDGE_MIN_MS` apart — the component also delays the re-read
+  // itself so a burst collapses into one fetch.
+  const NUDGE_MIN_MS = 500;
+  function shouldNudge(last, now) {
+    return last == null || now - last >= NUDGE_MIN_MS;
+  }
+
   window.OMP_FILE_PREVIEW = {
     readTarget, linkTarget, linkClick, inProject, language, splitHighlighted, clipLines, highlightLines, inRange,
     shouldReveal, REVEAL_INITIAL, REVEAL_CHUNK, HIGHLIGHT_MAX_CHARS, MAX_LINES, MAX_LINE_CHARS,
+    shouldNudge, NUDGE_MIN_MS,
   };
 })();

@@ -27,6 +27,7 @@ const {
 } = window.OMP_FILE_PREVIEW;
 const { formatBytes: _FP_size } = window.OMP_UPDATER;
 const { toDataUrl: _FP_toDataUrl } = window.OMP_IMAGES;
+const _FP_preview = window.OMP_FILE_PREVIEW;
 
 // Lines kept above the first read line when scrolling to it.
 const _FP_LEAD_LINES = 4;
@@ -142,18 +143,45 @@ function FilePreviewTitle({ meta, fallbackPath, onOpenGit }) {
   );
 }
 
-function FilePreview({ target, onClose, onOpenGit, headless = false, onMeta }) {
+function FilePreview({ target, onClose, onOpenGit, headless = false, onMeta, sessionId }) {
   // null while loading; then the bridge's `{ok, value | error}`.
+  // `rev` bumps on a watched change: the refresh is silent — the old text
+  // stays until the re-read lands, no loading flash.
   const [res, setRes] = React.useState(null);
+  const [rev, setRev] = React.useState(0);
 
   React.useEffect(() => {
     let live = true;
-    setRes(null);
+    if (rev === 0) setRes(null);
     // `{ok, value | error}`, never a rejection (live.js `_invokeResult`).
     window.OMP_BRIDGE.readProjectFile(target.path)
       .then((r) => { if (live) setRes(r ?? { ok: false, error: "No tab is open." }); });
     return () => { live = false; };
-  }, [target.path]);
+  }, [target.path, rev]);
+
+  // Live updates: watch while open, re-read (debounced) on a change. Rust
+  // applies the preview's own trust checks and watches the parent
+  // directory, so editor-style rename-over saves are caught; the event
+  // names the path as sent, so the match here is exact.
+  React.useEffect(() => {
+    if (!sessionId) return undefined;
+    let timer = null;
+    let last = null;
+    const sub = window.OMP_BRIDGE.onPreviewChanged((ev) => {
+      if (!ev || ev.sessionId !== sessionId || ev.path !== target.path) return;
+      const now = Date.now();
+      if (!_FP_preview.shouldNudge(last, now)) return;
+      last = now;
+      clearTimeout(timer);
+      timer = setTimeout(() => setRev(r => r + 1), _FP_preview.NUDGE_MIN_MS);
+    });
+    window.OMP_BRIDGE.watchProjectFile(target.path);
+    return () => {
+      sub.stop();
+      clearTimeout(timer);
+      window.OMP_BRIDGE.unwatchProjectFile(target.path);
+    };
+  }, [target.path, sessionId]);
 
   // Capture phase + preventDefault: the global keymap dispatcher skips
   // defaultPrevented events, so Esc closes the preview and nothing else.

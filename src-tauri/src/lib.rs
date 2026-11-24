@@ -895,6 +895,39 @@ fn stop_git_watch(session_id: String, watcher: State<'_, GitWatcherState>) {
     watcher.stop(&session_id);
 }
 
+/// Watch one file of the tab's project for changes while its preview is
+/// open: every change emits `preview://changed/{session_id}` with the path
+/// as sent. Same trust shape as `project_file_read` — the folder comes from
+/// the tab registry and the path goes through the preview's traversal and
+/// symlink checks (`preview_watcher::watch_target`); a missing file is
+/// watched for its creation. Watcher errors surface as an `Err` the
+/// frontend treats as "no live updates".
+#[tauri::command]
+fn preview_watch_start(
+    session_id: String,
+    path: String,
+    terminal: State<'_, Arc<terminal::TerminalManager>>,
+    watch: State<'_, preview_watcher::PreviewWatchState>,
+    app: tauri::AppHandle,
+) -> Result<(), String> {
+    let root = terminal
+        .folder(&session_id)
+        .ok_or_else(|| "this tab has no project folder".to_owned())?;
+    let file = preview_watcher::watch_target(&root, &path)?;
+    watch.start(&session_id, &path, file, app)
+}
+
+/// Stop one preview watch (`path`) or every watch of the session (no path,
+/// the tab-close path).  No-op when none is active.
+#[tauri::command]
+fn preview_watch_stop(
+    session_id: String,
+    path: Option<String>,
+    watch: State<'_, preview_watcher::PreviewWatchState>,
+) {
+    watch.stop(&session_id, path.as_deref());
+}
+
 /// Open a URL in the system default browser.
 ///
 /// Delegates to [`navigation_guard::open_external`], so this command shares
