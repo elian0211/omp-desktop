@@ -18,13 +18,25 @@ function SidePanelStub({ title, hint }) {
 function _PSideFold({ id, title, open, onToggle, children, grow, extra }) {
   return (
     <section className={`pside-fold${open ? "" : " closed"}${grow ? " grow" : ""}`}>
-      <button type="button" className="pside-fold-head" aria-expanded={open} onClick={() => onToggle(id)}>
+      {/* A row, not a <button>: the head hosts real buttons (the Explorer's
+          filter toggle, the Sessions plus), and HTML forbids a button
+          inside a button — Chromium rebuilds the DOM and the clicks land
+          wrong. The click and the keyboard role live on the row. */}
+      <div
+        role="button" tabIndex={0}
+        className="pside-fold-head" aria-expanded={open}
+        onClick={() => onToggle(id)}
+        onKeyDown={e => {
+          if (e.key !== "Enter" && e.key !== " ") return;
+          e.preventDefault();
+          onToggle(id);
+        }}>
         <span className={`pside-chev${open ? " open" : ""}`} aria-hidden="true">
           <_PSideIcon name="chevR" size={10} />
         </span>
         <span className="pside-fold-title">{title}</span>
         {extra && <span className="pside-fold-extra" onClick={e => e.stopPropagation()}>{extra}</span>}
-      </button>
+      </div>
       {open && <div className="pside-fold-body">{children}</div>}
     </section>
   );

@@ -454,7 +454,12 @@ impl Dir {
                 dir: nested_dir,
                 size,
                 status,
-                changed: 0,
+                // A nested repository's boundary row is itself the change
+                // (`Modified` when the checked-out commit moved): its own
+                // `changed` drives the dot and the changed-only filter,
+                // which would otherwise hide the row (`shows` needs
+                // `changed > 0` on a directory).
+                changed: u32::from(nested_dir && status.is_some_and(StatusKind::is_change)),
                 children: Vec::new(),
             });
         }
@@ -676,7 +681,10 @@ mod tests {
         assert!(sub.dir);
         assert_eq!(sub.status, Some(StatusKind::Modified));
         assert_eq!(sub.size, None);
-        assert!(sub.children.is_empty());
+        assert_eq!(sub.children, [] as [TreeNode; 0]);
+        // The boundary row carries the change itself, so the changed-only
+        // filter and the row dot still see it.
+        assert_eq!(sub.changed, 1);
         assert_eq!(tree.changed, 1);
     }
 

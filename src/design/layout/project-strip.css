@@ -106,12 +106,12 @@
 .pside-fold.grow { flex: 1; min-height: 120px; }
 .pside-fold.closed { flex: none; }
 .pside-fold-head {
-  appearance: none; border: 0; background: transparent;
   display: flex; align-items: center; gap: 6px;
   width: 100%; height: 28px; padding: 0 10px; flex: none;
   color: var(--fg-3); cursor: pointer; text-align: left;
 }
 .pside-fold-head:hover { background: var(--bg-hover); color: var(--fg-2); }
+.pside-fold-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .pside-fold-extra { margin-left: auto; display: inline-flex; }
 .pside-head-btn {
   appearance: none; border: 0; background: transparent;
