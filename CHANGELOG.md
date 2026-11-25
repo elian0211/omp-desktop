@@ -56,6 +56,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The files detail panel shows the picked file only — browsing belongs to the project side's Explorer fold. The toolbar's files button is gone (the chord `Ctrl+Shift+M` still opens the detail on the selected file) and the panel's bar has a close button beside the copy button. The file preview and the files panel no longer render a big file all at once: rows build in chunks as you scroll (the 20 000-line cap was a render guard — the text was always read in full), and the "已截断" chip now means "keep scrolling", not "this is all". Their code surfaces follow the theme now: background, line-number gutter and syntax tokens use theme variables (each theme ships its own `--syntax-*` palette) instead of a fixed dark block with one-dark token colours that clashed on the daylight theme.
 - A tool-approval prompt card follows the interface language: its "Allow tool: …" head and the Approve/Deny buttons translate display-only (the answer still carries omp's exact option label), and the ask dialog's timeout notes translate too. The detail lines (command, path, content preview) stay as omp wrote them. Its four buttons (Approve/Deny and the two remember offers) sit on one wrapping line instead of two rows.
 
+## [0.15.2] - 2026-11-23
+
+### Changed
+
+- Answered and cancelled desktop ask bubbles collapse to a one-line answer/status and prompt summary. The keyboard-accessible summary expands the full settled prompt again; expansion is local to each bubble. The phone transcript continues to drop settled cards.
+
+
 ## [0.15.1] - 2026-11-20
 
 ### Changed
