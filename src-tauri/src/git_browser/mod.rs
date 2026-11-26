@@ -31,7 +31,7 @@ pub use branches::{branches, Branch};
 pub use commit::{commit, commit_file, CommitView};
 pub use file::{file, is_binary, FileView};
 pub use log::{log, LogView};
-pub use status::{status, StatusView};
+pub use status::{fold, nested_changes, status, StatusView};
 
 use std::path::{Path, PathBuf};
 
@@ -78,9 +78,9 @@ fn open(path: &Path) -> Result<(crate::spawn_gate::Shared, gix::Repository, Path
 }
 
 /// Files a tree carries before it is cut off and marked `truncated` —
-/// shared by the project tree ([`status`]) and a commit's touched files
-/// ([`commit`]).
-const MAX_FILES: usize = 20_000;
+/// shared by the project tree ([`status`]), a commit's touched files
+/// ([`commit`]) and the plain file-system walk ([`crate::project_tree`]).
+pub const MAX_FILES: usize = 20_000;
 
 /// A file's change against the comparison base (`HEAD` for the work tree,
 /// the first parent for a commit), serialised as the bare variant name.

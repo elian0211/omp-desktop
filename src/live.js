@@ -4399,6 +4399,15 @@
       return _gitBrowserInvoke("git_browser_status", { allFiles: allFiles || undefined });
     },
 
+    /** The tab folder's plain file-system tree, the changes of the
+     *  repositories found inside it overlaid as status marks:
+     *  `ProjectTreeView` (`{ tree, changed, truncated }`, paths relative
+     *  to the tab folder). The files panel's fallback for a folder that
+     *  is not (only) a repository. */
+    projectTree() {
+      return _gitBrowserInvoke("project_tree", {});
+    },
+
     /** One working-tree file with its change against HEAD inline: `FileView`.
      *  `relPath` may be absolute inside the project (an edit card's target). */
     gitBrowserFile(relPath) {

@@ -224,7 +224,40 @@ fn git_succeeds(work_dir: &Path, args: &[&str], label: &str) -> Result<bool, Str
 /// failing clearly for bare repositories or paths that aren't inside a git
 /// repository at all. Shared with [`crate::git_browser`]. Discovered through
 /// [`crate::spawn_gate::discover`]: the guard comes back with the repository.
+///
+/// A project folder that is itself not a repository may hold one one level
+/// down (the sources live in `code/` of a workspace folder): when
+/// discovery from `path` fails and exactly one child directory is a
+/// repository, that one is opened, so the git browser and the working-tree
+/// actions still reach it. Several child repositories are ambiguous and
+/// refused with their names; none returns the original discovery error.
 pub fn discover(
+    path: &Path,
+) -> Result<(crate::spawn_gate::Shared, gix::Repository, PathBuf), String> {
+    match discover_at(path) {
+        Ok(found) => Ok(found),
+        Err(err) => match child_repositories(path).as_slice() {
+            [] => Err(err),
+            [only] => discover_at(only),
+            many => {
+                let names: Vec<String> = many
+                    .iter()
+                    .map(|p| {
+                        p.file_name()
+                            .map_or_else(String::new, |n| n.to_string_lossy().into_owned())
+                    })
+                    .collect();
+                Err(format!(
+                    "{err} (repositories found directly inside the folder: {} — open a tab on one of them)",
+                    names.join(", ")
+                ))
+            }
+        },
+    }
+}
+
+/// [`discover`] without the child fallback.
+fn discover_at(
     path: &Path,
 ) -> Result<(crate::spawn_gate::Shared, gix::Repository, PathBuf), String> {
     let (gate, repo) = crate::spawn_gate::discover(path)?;
@@ -233,6 +266,25 @@ pub fn discover(
         .map(Path::to_path_buf)
         .ok_or_else(|| "repository has no working tree".to_string())?;
     Ok((gate, repo, work_dir))
+}
+
+/// The directories directly inside `path` that are repositories (a `.git`
+/// beside them, file or directory). Symlinked children are skipped.
+fn child_repositories(path: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(path) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .filter(|e| {
+            e.file_type().is_ok_and(|t| t.is_dir())
+                && e.path().join(".git").exists()
+                // A repository is not discovered inside a repository: a
+                // submodule checkout's `.git` is not the tab folder's repo.
+                && crate::spawn_gate::discover(&e.path()).is_ok()
+        })
+        .map(|e| e.path())
+        .collect()
 }
 
 // ── accept / reject ─────────────────────────────────────────────────────────
@@ -949,5 +1001,68 @@ mod tests {
         let content = std::fs::read_to_string(repo.join("committed.txt")).expect("read back");
         assert_eq!(content, "local edit\n");
         std::fs::remove_dir_all(&repo).ok();
+    }
+
+    // ── discovery: a repository one level down ───────────────────────────
+
+    use super::discover as discover_repo;
+
+    #[test]
+    fn discover_reaches_a_repository_one_level_down() {
+        if !git_available() {
+            return;
+        }
+        // A project folder that is not a repository, holding `code/`.
+        let root = unique_temp_dir("discover-child-root");
+        let code = root.join("code");
+        std::fs::create_dir_all(&code).expect("mkdir");
+        std::fs::write(root.join("readme.md"), "r\n").expect("write");
+        run_git(&code, &["init", "-q"]);
+
+        let (_, _, work_dir) = discover_repo(&root).expect("child repo discovered");
+        assert_eq!(
+            std::fs::canonicalize(&work_dir).expect("canonical work dir"),
+            std::fs::canonicalize(&code).expect("canonical code")
+        );
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn discover_refuses_ambiguous_child_repositories_by_name() {
+        if !git_available() {
+            return;
+        }
+        let root = unique_temp_dir("discover-ambiguous");
+        for name in ["code", "docs"] {
+            let dir = root.join(name);
+            std::fs::create_dir_all(&dir).expect("mkdir");
+            run_git(&dir, &["init", "-q"]);
+        }
+        // The temp dir itself could sit inside a repo on odd setups; only
+        // assert when discovery genuinely fails there.
+        if gix::discover(&root).is_err() {
+            let Err(err) = discover_repo(&root) else {
+                panic!("discovery should fail without any repository");
+            };
+            assert!(err.contains("code") && err.contains("docs"), "{err}");
+            assert!(err.contains("not a git repository"), "{err}");
+        }
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn discover_without_any_repository_keeps_the_original_error() {
+        if !git_available() {
+            return;
+        }
+        let root = unique_temp_dir("discover-none");
+        std::fs::create_dir_all(root.join("plain")).expect("mkdir");
+        if gix::discover(&root).is_err() {
+            let Err(err) = discover_repo(&root) else {
+                panic!("discovery should fail without any repository");
+            };
+            assert!(err.contains("not a git repository"), "{err}");
+        }
+        std::fs::remove_dir_all(&root).ok();
     }
 }

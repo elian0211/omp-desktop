@@ -39,6 +39,7 @@ mod private_fs;
 mod profiles;
 mod program_setting;
 mod project_file;
+mod project_tree;
 mod recent_projects;
 mod redaction;
 mod remote;
@@ -1001,6 +1002,15 @@ async fn git_browser_commit_file(
 #[tauri::command]
 async fn git_browser_branches(path: String) -> Result<Vec<git_browser::Branch>, String> {
     off_ipc(move || git_browser::branches(Path::new(&path))).await?
+}
+
+/// The tab folder's plain file-system tree with the changes of the
+/// repositories inside it overlaid — see `project_tree::project_tree`. The
+/// files panel's source for a folder that is not (only) a repository.
+/// `async` + `spawn_blocking`: a full directory walk.
+#[tauri::command]
+async fn project_tree(path: String) -> Result<project_tree::ProjectTreeView, String> {
+    off_ipc(move || project_tree::project_tree(Path::new(&path))).await?
 }
 
 /// A file of the tab's project for the in-app preview — see
@@ -1982,6 +1992,7 @@ pub fn run() {
             git_browser_branches,
             git_browser_commit,
             git_browser_commit_file,
+            project_tree,
             project_file_read,
             project_file_reveal,
             pr_automation::pr_automation_snapshot,

@@ -63,7 +63,19 @@ function useFileComments({ bridge, tabId, sessionIds, open, setOpen, project, ed
   React.useEffect(() => {
     if (!open || !folder) return undefined;
     let live = true;
-    bridge.gitBrowserStatus(view.allFiles).then(res => { if (live) setStatus({ key: folder, ..._ufcResult(res) }); });
+    bridge.gitBrowserStatus(view.allFiles).then(async (res) => {
+      if (!live) return;
+      if (res?.ok) { setStatus({ key: folder, value: res.value, error: null }); return; }
+      // Not a repository (or an unreadable one): the plain file-system
+      // tree, rooted at the tab folder (so no folder cut) with the
+      // changes of repositories inside it overlaid. Still failing: the
+      // folder itself is unreadable — the @-mention search takes over.
+      const fs = await bridge.projectTree();
+      if (!live) return;
+      setStatus(fs?.ok
+        ? { key: folder, value: { ...fs.value, folder: "", repo: null }, error: null }
+        : { key: folder, value: null, error: fs?.error ?? _ufcResult(res).error });
+    });
     return () => { live = false; };
   }, [bridge, open, folder, tick]);
 

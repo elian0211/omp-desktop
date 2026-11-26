@@ -30,7 +30,7 @@ function FilesView({ ui, onOpen, onReference, onReveal, showFilter = true }) {
       </div>
     );
   }
-  const repo = ui.scope === "repo";
+  const repo = ui.scope === "repo" && !!ui.repoRoot;
   const tree = repo ? ui.repoTree : ui.tree;
   const changedCount = repo ? (ui.repoTree?.changed ?? 0) : ui.changedCount;
   const activeTab = ui.view.changedOnly ? "changes" : repo ? "repo" : "project";
@@ -49,7 +49,7 @@ function FilesView({ ui, onOpen, onReference, onReveal, showFilter = true }) {
         searched={ui.searchMode}
         filterOpen={showFilter}
         emptyText={ui.searchMode && !ui.view.filter.trim()
-          ? OMP_TR("Not a git repository: type to search the folder.") : undefined}
+          ? OMP_TR("Type to search the folder.") : undefined}
         onFileContext={(node, e) => setMenu({
           x: e.clientX, y: e.clientY,
           path: repo && ui.repoRoot ? `${ui.repoRoot}/${node.path}` : node.path,
@@ -64,7 +64,8 @@ function FilesView({ ui, onOpen, onReference, onReveal, showFilter = true }) {
         <div className="fv-tabs" role="tablist" aria-label={OMP_TR("file filter")}>
           {[
             { id: "project", label: OMP_TR("project files") },
-            { id: "repo", label: OMP_TR("repository files") },
+            // No repository in or under this folder: no repository tree.
+            ...(ui.repoRoot ? [{ id: "repo", label: OMP_TR("repository files") }] : []),
             { id: "changes", label: <><_FV_Icon name="diff2" size={11} /> {changedCount} {OMP_TR("changed files")}</> },
           ].map(tab => (
             <button type="button" key={tab.id} role="tab" aria-selected={activeTab === tab.id}

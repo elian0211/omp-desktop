@@ -1243,7 +1243,7 @@ window.OMP_I18N.add("zh", {
   "Pick lines or select text, then explain or comment.": "选择行或文本，然后解释或注释。",
   "clear all": "全部清除",
   "Send the marks now, with no typed text": "立即发送这些标记，不附带输入的文字",
-  "Not a git repository: type to search the folder.": "不是 git 仓库：输入以搜索文件夹。",
+  "Type to search the folder.": "输入以搜索该文件夹。",
   "reload from disk": "从磁盘重新加载",
   "Comment in files panel": "在文件面板中注释",
   "Explain or comment lines of this file in the files panel": "在文件面板中解释或注释此文件的行",

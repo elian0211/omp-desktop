@@ -295,6 +295,16 @@ fn ignored(
     Ok((files, dirs))
 }
 
+/// The working-tree changes of the repository found at `path`, one kind
+/// per work-dir-relative path — the file explorer's status overlay for a
+/// repository nested inside a project folder ([`crate::project_tree`]).
+/// Same filtering as [`changes`]: untracked files listed individually,
+/// ignored ones never, a submodule only when its checked-out commit moved.
+pub fn nested_changes(path: &Path) -> Result<BTreeMap<String, StatusKind>, String> {
+    let (_gate, repo, _work_dir) = open(path)?;
+    Ok(changes(&repo)?.kinds)
+}
+
 /// `git_browser_status(path)` — `all_files` adds the ignored paths as
 /// [`StatusKind::Ignored`] (files, and collapsed ignored directories).
 pub fn status(path: &Path, all_files: bool) -> Result<StatusView, String> {
@@ -490,7 +500,7 @@ fn join(dir: &str, name: &str) -> String {
 /// ([`disk_size`], [`tracked_size`]). `ignored_dirs` are paths of
 /// ignored directories collapsed by the dirwalk: they become empty
 /// child dirs whose `status` is [`StatusKind::Ignored`].
-pub(super) fn fold(
+pub fn fold(
     files: impl IntoIterator<Item = (String, Option<StatusKind>, Option<u64>, bool)>,
     ignored_dirs: Vec<String>,
 ) -> TreeNode {
