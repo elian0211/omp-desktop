@@ -352,27 +352,43 @@ pub fn status(path: &Path, all_files: bool) -> Result<StatusView, String> {
     } else {
         Vec::new()
     };
-    let tree = fold(
-        files.into_iter().map(|(path, kind)| {
-            // Unchanged tracked files take the index's stat size; changed,
-            // untracked and ignored ones stat fresh (a deleted path and a
-            // row that is a directory on disk have no size). A gitlink is
-            // represented in the index as one path but its checkout is a
-            // directory: show that boundary as a directory without walking
-            // into the nested repository.
-            let nested_dir = work_dir.join(&path).is_dir();
-            let size = if nested_dir {
-                None
-            } else {
-                match kind {
-                    None => tracked_size(&index, &work_dir, &path),
-                    Some(_) => disk_size(&work_dir, &path),
-                }
-            };
-            (path, kind, size, nested_dir)
-        }),
-        ignored_dirs,
-    );
+    let mut spliced: Vec<(String, Option<StatusKind>, Option<u64>, bool)> = Vec::new();
+    let mut mapped: Vec<(String, Option<StatusKind>, Option<u64>, bool)> = Vec::new();
+    for (path, kind) in files {
+        // Unchanged tracked files take the index's stat size; changed,
+        // untracked and ignored ones stat fresh (a deleted path and a
+        // row that is a directory on disk have no size). A gitlink is
+        // represented in the index as one path but its checkout is a
+        // directory: show that boundary as a directory without walking
+        // into the nested repository.
+        let nested_dir = work_dir.join(&path).is_dir();
+        let size = if nested_dir {
+            None
+        } else {
+            match kind {
+                None => tracked_size(&index, &work_dir, &path),
+                Some(_) => disk_size(&work_dir, &path),
+            }
+        };
+        // A submodule checkout (its disk directory holds a `.git`)
+        // keeps its gitlink row, but the explorer must browse it:
+        // splice its work-tree files in, marked by the submodule's
+        // own repository — `nested_changes` opens it with the same
+        // filter-driver stripping as here, so none of its drivers
+        // runs (asserted in the tests). These rows ride in past
+        // `MAX_FILES`: a submodule tree is the user's checked-out
+        // sources, not noise to cap away.
+        if nested_dir && work_dir.join(&path).join(".git").exists() {
+            let (entries, _cut) = crate::project_tree::entries(&work_dir.join(&path));
+            spliced.extend(
+                entries
+                    .into_iter()
+                    .map(|(rel, st, sz, dir)| (format!("{path}/{rel}"), st, sz, dir)),
+            );
+        }
+        mapped.push((path, kind, size, nested_dir));
+    }
+    let tree = fold(mapped.into_iter().chain(spliced), ignored_dirs);
     let head = repo.head_id().ok().map(gix::Id::detach);
     let head_name = repo.head_name().map_err(fail("failed to read HEAD"))?;
     let (ahead, behind) = match (head, &head_name) {
@@ -457,6 +473,22 @@ impl Dir {
             children.push(node);
         }
         for (name, (status, size, nested_dir)) in self.files {
+            // A submodule checkout whose files were spliced in holds both
+            // the gitlink row (this entry, a child-less directory row
+            // carrying the moved-commit mark) and the real tree (a same
+            // named child from the dirs map). Merge the gitlink row into
+            // that child instead of emitting the name twice; the mark
+            // stays visible on the directory (and counts it into the
+            // changed-only filter).
+            if nested_dir {
+                if let Some(node) = children.iter_mut().find(|c| c.dir && c.name == *name) {
+                    let moved = u32::from(status.is_some_and(StatusKind::is_change));
+                    node.status = node.status.or(status);
+                    node.changed += moved;
+                    changed += moved;
+                    continue;
+                }
+            }
             changed += u32::from(status.is_some_and(StatusKind::is_change));
             children.push(TreeNode {
                 path: join(&path, &name),
@@ -915,6 +947,27 @@ mod tests {
             None,
             "dirty content is ignored"
         );
+        // The checkout's files are spliced in (browsable), marked by the
+        // submodule's own repository — its edit shows, without any of its
+        // filter drivers running.
+        assert!(
+            find(&view.tree, "sub").is_some_and(|n| n.dir && !n.children.is_empty()),
+            "the submodule's files are spliced in"
+        );
+        assert_eq!(
+            status_of(&view.tree, "sub/a.txt"),
+            Some(StatusKind::Modified)
+        );
+        // The gitlink row and the spliced tree share a name: exactly one
+        // row after the merge.
+        assert_eq!(
+            view.tree
+                .children
+                .iter()
+                .filter(|c| c.name == "sub")
+                .count(),
+            1
+        );
 
         // A new commit checked out in the submodule is still a change.
         outer.git(&[
@@ -934,7 +987,19 @@ mod tests {
         let sub = find(&view.tree, "sub").expect("submodule row");
         assert_eq!(sub.status, Some(StatusKind::Modified));
         assert!(sub.dir, "a checked-out gitlink is a directory boundary");
-        assert!(sub.children.is_empty(), "status must not descend into it");
+        assert!(
+            !sub.children.is_empty(),
+            "the checkout's files stay browsable"
+        );
+        // The moved-commit mark survives the merge with the spliced tree.
+        assert_eq!(
+            view.tree
+                .children
+                .iter()
+                .filter(|c| c.name == "sub")
+                .count(),
+            1
+        );
     }
 
     #[test]

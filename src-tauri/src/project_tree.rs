@@ -53,10 +53,10 @@ pub struct ProjectTreeView {
     pub truncated: bool,
 }
 
-/// One walked file: `/`-separated path relative to the tab folder, its
+/// One walked file: `/`-separated path relative to the walk root, its
 /// overlaid status, its size on disk, and the git-tree "directory row"
 /// flag (always false here — real directories are tree nodes).
-type Entry = (String, Option<StatusKind>, Option<u64>, bool);
+pub type Entry = (String, Option<StatusKind>, Option<u64>, bool);
 
 /// A repository found inside the folder: its files' prefix relative to the
 /// tab folder (`""` for a repository at the top) and its files' changes
@@ -95,9 +95,25 @@ pub fn project_tree(path: &Path) -> Result<ProjectTreeView, String> {
     if !root.is_dir() {
         return Err(format!("{} is not a folder", path.display()));
     }
+    let (files, truncated) = entries(&root);
+    let tree = fold(files, Vec::new());
+    Ok(ProjectTreeView {
+        changed: tree.changed,
+        tree,
+        truncated,
+    })
+}
+
+/// The walked files of `root` (which must be a directory): the file-system
+/// walk of [`project_tree`] without the fold — the git status tree's
+/// submodules splice their work-tree files in through this
+/// ([`crate::git_browser::status`]).
+/// Paths are `/`-separated and relative to `root` as given (not
+/// canonicalised); the flag says whether the walk was cut off.
+pub fn entries(root: &Path) -> (Vec<Entry>, bool) {
     let mut files = Vec::new();
     let mut nested = Vec::new();
-    let truncated = walk(&root, "", 0, &mut files, &mut nested);
+    let truncated = walk(root, "", 0, &mut files, &mut nested);
     // Deleted files are in a repository's changes but not on disk, so the
     // walk never saw them: add them as size-less rows.
     if !nested.is_empty() {
@@ -123,12 +139,7 @@ pub fn project_tree(path: &Path) -> Result<ProjectTreeView, String> {
             }
         }
     }
-    let tree = fold(files, Vec::new());
-    Ok(ProjectTreeView {
-        changed: tree.changed,
-        tree,
-        truncated,
-    })
+    (files, truncated)
 }
 
 /// Walk `dir` (whose files are prefixed `prefix`) into `files`, collecting
