@@ -65,16 +65,25 @@ function useFileComments({ bridge, tabId, sessionIds, open, setOpen, project, ed
     let live = true;
     bridge.gitBrowserStatus(view.allFiles).then(async (res) => {
       if (!live) return;
-      if (res?.ok) { setStatus({ key: folder, value: res.value, error: null }); return; }
-      // Not a repository (or an unreadable one): the plain file-system
+      // `folder` is null when the tab folder is not inside the work tree —
+      // discovery opened a repository found beside the folder's contents
+      // (a `code/` below a non-repo root): not placeable, fall back too.
+      if (res?.ok && res.value.folder != null) {
+        setStatus({ key: folder, value: res.value, error: null });
+        return;
+      }
+      // Not a repository (or not placeable in one): the plain file-system
       // tree, rooted at the tab folder (so no folder cut) with the
       // changes of repositories inside it overlaid. Still failing: the
       // folder itself is unreadable — the @-mention search takes over.
       const fs = await bridge.projectTree();
       if (!live) return;
+      const fallbackError = res?.ok
+        ? OMP_TR("The project folder could not be placed in its repository's work tree.")
+        : _ufcResult(res).error;
       setStatus(fs?.ok
         ? { key: folder, value: { ...fs.value, folder: "", repo: null }, error: null }
-        : { key: folder, value: null, error: fs?.error ?? _ufcResult(res).error });
+        : { key: folder, value: null, error: fs?.error ?? fallbackError });
     });
     return () => { live = false; };
   }, [bridge, open, folder, tick]);

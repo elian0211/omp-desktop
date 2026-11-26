@@ -225,12 +225,12 @@ fn git_succeeds(work_dir: &Path, args: &[&str], label: &str) -> Result<bool, Str
 /// repository at all. Shared with [`crate::git_browser`]. Discovered through
 /// [`crate::spawn_gate::discover`]: the guard comes back with the repository.
 ///
-/// A project folder that is itself not a repository may hold one one level
-/// down (the sources live in `code/` of a workspace folder): when
-/// discovery from `path` fails and exactly one child directory is a
-/// repository, that one is opened, so the git browser and the working-tree
-/// actions still reach it. Several child repositories are ambiguous and
-/// refused with their names; none returns the original discovery error.
+/// A project folder that is itself not a repository may hold a repository
+/// at some depth (the sources live in `code/` of a workspace folder): when
+/// discovery from `path` fails, the nearest repository level below is
+/// opened ([`child_repositories`]) — exactly one repository there is used,
+/// several are refused with their names, none returns the original
+/// discovery error.
 pub fn discover(
     path: &Path,
 ) -> Result<(crate::spawn_gate::Shared, gix::Repository, PathBuf), String> {
@@ -268,24 +268,47 @@ fn discover_at(
     Ok((gate, repo, work_dir))
 }
 
-/// The directories directly inside `path` that are repositories (a `.git`
-/// beside them, file or directory). Symlinked children are skipped.
+/// The repositories nearest to `path`: breadth-first, the first level
+/// holding at least one repository decides — deeper repositories sit
+/// inside a nearer one's work tree and are that repository's business,
+/// not candidates of their own. A level with several repositories is
+/// returned whole (the caller refuses it as ambiguous); none within
+/// [`CHILD_REPO_MAX_DEPTH`] levels returns an empty vec. Symlinked
+/// children are skipped, and a found repository is never descended into.
 fn child_repositories(path: &Path) -> Vec<PathBuf> {
-    let Ok(entries) = std::fs::read_dir(path) else {
-        return Vec::new();
-    };
-    entries
-        .flatten()
-        .filter(|e| {
-            e.file_type().is_ok_and(|t| t.is_dir())
-                && e.path().join(".git").exists()
+    let mut level = vec![path.to_path_buf()];
+    for _ in 0..CHILD_REPO_MAX_DEPTH {
+        let mut found = Vec::new();
+        let mut deeper = Vec::new();
+        for dir in &level {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                if !entry.file_type().is_ok_and(|t| t.is_dir()) {
+                    continue;
+                }
+                let child = entry.path();
                 // A repository is not discovered inside a repository: a
                 // submodule checkout's `.git` is not the tab folder's repo.
-                && crate::spawn_gate::discover(&e.path()).is_ok()
-        })
-        .map(|e| e.path())
-        .collect()
+                if child.join(".git").exists() && crate::spawn_gate::discover(&child).is_ok() {
+                    found.push(child);
+                } else {
+                    deeper.push(child);
+                }
+            }
+        }
+        if !found.is_empty() {
+            return found;
+        }
+        level = deeper;
+    }
+    Vec::new()
 }
+
+/// How many directory levels below a non-repository project folder the
+/// child-repository discovery reaches.
+const CHILD_REPO_MAX_DEPTH: usize = 8;
 
 // ── accept / reject ─────────────────────────────────────────────────────────
 
@@ -1063,6 +1086,37 @@ mod tests {
             };
             assert!(err.contains("not a git repository"), "{err}");
         }
+        std::fs::remove_dir_all(&root).ok();
+    }
+
+    #[test]
+    fn discover_takes_the_nearest_repository_level_and_the_shallowest_of_it() {
+        if !git_available() {
+            return;
+        }
+        let root = unique_temp_dir("discover-nearest");
+        let one = root.join("one");
+        let deep = root.join("two").join("deep");
+        for dir in [&one, &deep] {
+            std::fs::create_dir_all(dir).expect("mkdir");
+            run_git(dir, &["init", "-q"]);
+        }
+        std::fs::create_dir_all(root.join("plain")).expect("mkdir");
+
+        // `one` (level 1) wins over `two/deep` (level 2) ...
+        let (_, _, work_dir) = discover_repo(&root).expect("nearest repo");
+        assert_eq!(
+            std::fs::canonicalize(&work_dir).expect("canonical"),
+            std::fs::canonicalize(&one).expect("canonical")
+        );
+
+        // ... and without the level-1 repository, `two/deep` is found.
+        std::fs::remove_dir_all(root.join("one")).expect("rm");
+        let (_, _, work_dir) = discover_repo(&root).expect("deeper repo");
+        assert_eq!(
+            std::fs::canonicalize(&work_dir).expect("canonical"),
+            std::fs::canonicalize(&deep).expect("canonical")
+        );
         std::fs::remove_dir_all(&root).ok();
     }
 }
