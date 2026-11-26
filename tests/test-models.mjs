@@ -118,6 +118,8 @@ check("isResponsesApi gates on model api over provider api", () => {
   assert.equal(M.isResponsesApi(p, {}), true);
   assert.equal(M.isResponsesApi({ api: "openai-completions" }, {}), false);
   assert.equal(M.isResponsesApi(p, undefined), true);
+  // Hand-typed values tolerate stray whitespace.
+  assert.equal(M.isResponsesApi({ api: " openai-responses " }, {}), true);
 });
 
 check("the schema's Models row and the renderer stay registered", () => {

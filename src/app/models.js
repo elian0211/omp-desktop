@@ -14,6 +14,9 @@
    ═══════════════════════════════════════════════════════════════════════ */
 (function () {
   const AUTH_MODES = Object.freeze(["apiKey", "none", "oauth"]);
+  /** The api values omp itself dispatches on (verified against the omp
+   *  binary's provider switch). */
+  const API_MODES = Object.freeze(["openai-completions", "openai-responses", "anthropic-messages"]);
   const KNOWN_MODEL_FIELDS = Object.freeze([
     "id", "name", "api", "reasoning", "contextWindow", "maxTokens",
   ]);
@@ -66,9 +69,10 @@
    *  unknown fields round-trip through Rust untouched, so the editor edits
    *  just these leaves and prunes empty branches on unset. */
 
-  /** Provider-native tools only ride the OpenAI Responses API. */
+  /** Provider-native tools only ride the OpenAI Responses API. Tolerates
+   *  stray whitespace in a hand-typed `api` value. */
   const isResponsesApi = (provider, model) =>
-    String(model?.api ?? provider?.api ?? "") === "openai-responses";
+    String(model?.api ?? provider?.api ?? "").trim() === "openai-responses";
 
   const compatFlag = (entry, leaf) =>
     entry?.compat?.openaiProviderTools?.[leaf] === true;
@@ -110,7 +114,7 @@
   };
 
   window.OMP_MODELS = {
-    AUTH_MODES, KNOWN_MODEL_FIELDS, providersFromSnapshot, copy, sanitize, validate, savePayload,
+    AUTH_MODES, API_MODES, KNOWN_MODEL_FIELDS, providersFromSnapshot, copy, sanitize, validate, savePayload,
     isResponsesApi, imageGeneration, setImageGeneration, providerToolsEnabled, setProviderToolsEnabled,
   };
 })();

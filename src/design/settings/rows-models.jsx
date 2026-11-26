@@ -130,7 +130,8 @@ function _SM_providerCard({ provider, onChange, onRemove, onImageAgent, onDiscov
             onChange={v => onChange({ ...provider, baseUrl: v })} />
         </label>
         <label>{OMP_TR("API")}
-          <_SM_field mono value={provider.api} placeholder="openai-completions"
+          <Seg value={(provider.api ?? "openai-completions").trim()} label={OMP_TR("API")}
+            options={_SM_M.API_MODES.map(a => ({ value: a, label: a }))}
             onChange={v => onChange({ ...provider, api: v })} />
         </label>
         <label>{OMP_TR("Auth")}
@@ -142,7 +143,7 @@ function _SM_providerCard({ provider, onChange, onRemove, onImageAgent, onDiscov
           <_SM_keyField provider={provider} busy={busy}
             onChange={v => onChange({ ...provider, apiKey: v })} />
         </label>
-        {String(provider.api ?? "") === "openai-responses" && (
+        {_SM_M.isResponsesApi(provider, undefined) && (
           <label className="st-mdl-r" title={OMP_TR("opt-in provider-native tools on an OpenAI-compatible gateway (official OpenAI has web_search by default)")}>
             <input type="checkbox" disabled={busy}
               checked={_SM_M.providerToolsEnabled(provider)}
