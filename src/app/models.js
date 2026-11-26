@@ -61,6 +61,38 @@
    *  the snapshot (by content) is a change worth sending a key for. */
   const sameProvider = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+  /** ── provider-native tools (compat.openaiProviderTools) ──
+   *  The omp-openai-provider-tools plugin reads these; `compat` and other
+   *  unknown fields round-trip through Rust untouched, so the editor edits
+   *  just these leaves and prunes empty branches on unset. */
+
+  /** Provider-native tools only ride the OpenAI Responses API. */
+  const isResponsesApi = (provider, model) =>
+    String(model?.api ?? provider?.api ?? "") === "openai-responses";
+
+  const compatFlag = (entry, leaf) =>
+    entry?.compat?.openaiProviderTools?.[leaf] === true;
+
+  /** Sets or clears one `compat.openaiProviderTools.<leaf>` boolean on a
+   *  copy, pruning the now-empty `openaiProviderTools`/`compat` branches
+   *  (and never touching sibling compat leaves). */
+  const setCompatFlag = (entry, leaf, on) => {
+    const compat = { ...(entry.compat ?? {}) };
+    const tools = { ...(compat.openaiProviderTools ?? {}) };
+    if (on) tools[leaf] = true;
+    else delete tools[leaf];
+    if (Object.keys(tools).length > 0) compat.openaiProviderTools = tools;
+    else delete compat.openaiProviderTools;
+    if (Object.keys(compat).length > 0) return { ...entry, compat };
+    const { compat: _dropped, ...rest } = entry;
+    return rest;
+  };
+
+  const imageGeneration = (model) => compatFlag(model, "imageGeneration");
+  const setImageGeneration = (model, on) => setCompatFlag(model, "imageGeneration", on);
+  const providerToolsEnabled = (provider) => compatFlag(provider, "enabled");
+  const setProviderToolsEnabled = (provider, on) => setCompatFlag(provider, "enabled", on);
+
   /** The `models_config_set` payload from a draft: `providers` is the full
    *  edited list (pseudo fields and keys stripped; Rust merges the typed
    *  keys from `apiKeys` over the stored entry), `apiKeys` carries only
@@ -79,5 +111,6 @@
 
   window.OMP_MODELS = {
     AUTH_MODES, KNOWN_MODEL_FIELDS, providersFromSnapshot, copy, sanitize, validate, savePayload,
+    isResponsesApi, imageGeneration, setImageGeneration, providerToolsEnabled, setProviderToolsEnabled,
   };
 })();

@@ -84,6 +84,42 @@ check("savePayload strips pseudo fields and carries typed keys only", () => {
   assert.deepEqual({ ...apiKeys }, { a: "sk-new" }, "trimmed typed key, untouched provider has none");
 });
 
+check("compat.openaiProviderTools flags edit, prune, and keep siblings", () => {
+  const gateway = provider("g", { api: "openai-responses" }, [model("m1", { api: "openai-responses" })]);
+  // Model-level imageGeneration.
+  assert.equal(M.imageGeneration(gateway.models[0]), false);
+  const withImage = M.setImageGeneration(gateway.models[0], true);
+  assert.equal(M.imageGeneration(withImage), true);
+  assert.equal(JSON.stringify(withImage.compat), JSON.stringify({ openaiProviderTools: { imageGeneration: true } }));
+  // Unset prunes the empty branches entirely.
+  assert.equal("compat" in M.setImageGeneration(withImage, false), false);
+  // Sibling leaves and provider-level fields survive.
+  const busy = M.setImageGeneration(
+    { ...withImage, compat: { ...withImage.compat, openaiProviderTools: { ...withImage.compat.openaiProviderTools, outputDirectory: "./imgs" }, stream: true } },
+    true,
+  );
+  assert.equal(busy.compat.stream, true);
+  assert.equal(busy.compat.openaiProviderTools.outputDirectory, "./imgs");
+  const off = M.setImageGeneration(busy, false);
+  assert.equal(off.compat.stream, true);
+  assert.equal(off.compat.openaiProviderTools.imageGeneration, undefined);
+  // Provider-level enabled.
+  const enabled = M.setProviderToolsEnabled(gateway, true);
+  assert.equal(M.providerToolsEnabled(enabled), true);
+  assert.equal("compat" in M.setProviderToolsEnabled(enabled, false), false);
+  // The edited model still passes the whole-payload round trip untouched.
+  const payload = M.savePayload([{ ...gateway, models: [M.setImageGeneration(gateway.models[0], true)] }]);
+  assert.equal(JSON.stringify(payload.providers[0].models[0].compat), JSON.stringify({ openaiProviderTools: { imageGeneration: true } }));
+});
+
+check("isResponsesApi gates on model api over provider api", () => {
+  const p = { api: "openai-responses" };
+  assert.equal(M.isResponsesApi(p, { api: "openai-completions" }), false);
+  assert.equal(M.isResponsesApi(p, {}), true);
+  assert.equal(M.isResponsesApi({ api: "openai-completions" }, {}), false);
+  assert.equal(M.isResponsesApi(p, undefined), true);
+});
+
 check("the schema's Models row and the renderer stay registered", () => {
   const src = readFileSync(join(root, "src/app/settings-schema.js"), "utf8");
   const section = src.slice(src.indexOf('{ id: "models"'), src.indexOf('{ id: "session"'));

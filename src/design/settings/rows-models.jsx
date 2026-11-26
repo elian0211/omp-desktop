@@ -19,7 +19,9 @@ function _SM_field({ value, onChange, placeholder, type = "text", mono = false, 
   );
 }
 
-function _SM_modelRow({ model, onChange, onRemove, busy }) {
+function _SM_modelRow({ model, provider, onChange, onRemove, onImageAgent, busy }) {
+  const responses = _SM_M.isResponsesApi(provider, model);
+  const image = responses && _SM_M.imageGeneration(model);
   return (
     <div className="st-mdl">
       <button type="button" className="st-ghost st-mdl-x" title={OMP_TR("remove model")}
@@ -36,11 +38,23 @@ function _SM_modelRow({ model, onChange, onRemove, busy }) {
           onChange={e => onChange({ ...model, reasoning: e.target.checked })} />
         <span>{OMP_TR("reasoning")}</span>
       </label>
+      {responses && (
+        <label className="st-mdl-r" title={OMP_TR("provider-native image_generation (openai-responses)")}>
+          <input type="checkbox" checked={image} disabled={busy}
+            onChange={e => onChange(_SM_M.setImageGeneration(model, e.target.checked))} />
+          <span>{OMP_TR("image gen")}</span>
+        </label>
+      )}
+      {image && model.id?.trim() && (
+        <button type="button" className="st-ghost st-mdl-agent" disabled={busy}
+          title={OMP_TR("writes the image_generator subagent for this model")}
+          onClick={() => onImageAgent(model)}>{OMP_TR("image subagent")}</button>
+      )}
     </div>
   );
 }
 
-function _SM_providerCard({ provider, onChange, onRemove, busy }) {
+function _SM_providerCard({ provider, onChange, onRemove, onImageAgent, busy }) {
   const { SettingsSeg: Seg } = window;
   const setModel = (i, m) => onChange({
     ...provider,
@@ -76,6 +90,14 @@ function _SM_providerCard({ provider, onChange, onRemove, busy }) {
           <_SM_field type="password" mono value={provider.apiKey ?? ""} placeholder={OMP_TR("unchanged")}
             onChange={v => onChange({ ...provider, apiKey: v })} />
         </label>
+        {String(provider.api ?? "") === "openai-responses" && (
+          <label className="st-mdl-r" title={OMP_TR("opt-in provider-native tools on an OpenAI-compatible gateway (official OpenAI has web_search by default)")}>
+            <input type="checkbox" disabled={busy}
+              checked={_SM_M.providerToolsEnabled(provider)}
+              onChange={e => onChange(_SM_M.setProviderToolsEnabled(provider, e.target.checked))} />
+            <span>{OMP_TR("provider tools")}</span>
+          </label>
+        )}
       </div>
       <div className="st-mmodels">
         <div className="st-mmodels-head">{OMP_TR("Models")}
@@ -85,8 +107,9 @@ function _SM_providerCard({ provider, onChange, onRemove, busy }) {
           </button>
         </div>
         {provider.models.map((m, i) => (
-          <_SM_modelRow key={i} model={m} busy={busy}
+          <_SM_modelRow key={i} model={m} provider={provider} busy={busy}
             onChange={m2 => setModel(i, m2)}
+            onImageAgent={onImageAgent}
             onRemove={() => onChange({ ...provider, models: provider.models.filter((_, j) => j !== i) })} />
         ))}
       </div>
@@ -102,11 +125,22 @@ function _SM_ProvidersRow({ row, ctx, query }) {
   // on the draft provider as `apiKey` (never echoed back by the backend).
   const [draft, setDraft] = React.useState(null);
   const [formError, setFormError] = React.useState("");
+  const [agentNote, setAgentNote] = React.useState("");
   const busy = models.busy;
   const list = draft ?? (_models_snap_list(models.snap));
   const dirty = draft != null;
 
   const update = (next) => { setDraft(next); setFormError(""); };
+
+  /** Writes the image_generator subagent for a model marked 生图: the
+   *  alias omp routes is `<provider>/<model>`. An existing file is only
+   *  replaced after the hook's own confirm. */
+  const makeImageAgent = async (provider, model) => {
+    setAgentNote("");
+    const res = await models.writeImageAgent(`${provider.id}/${model.id}`, false);
+    if (res.ok) setAgentNote(OMP_TR("image agent written: {path}", { path: res.path }));
+    else if (res.error !== "cancelled") setFormError(res.error);
+  };
 
   const save = async () => {
     const clean = _SM_M.sanitize(draft);
@@ -134,6 +168,7 @@ function _SM_ProvidersRow({ row, ctx, query }) {
         {list.map((p, i) => (
           <_SM_providerCard key={i} provider={p} busy={busy}
             onChange={p2 => update(list.map((old, j) => (j === i ? p2 : old)))}
+            onImageAgent={m => makeImageAgent(p, m)}
             onRemove={() => update(list.filter((_, j) => j !== i))} />
         ))}
         <div className="st-models-actions">
@@ -154,6 +189,7 @@ function _SM_ProvidersRow({ row, ctx, query }) {
           )}
         </div>
         <div className="st-mpath mono">{models.snap.path}</div>
+        {agentNote && <div className="st-mnote">{agentNote}</div>}
         {formError && <div className="st-row-error">{formError}</div>}
         {models.error && <div className="st-row-error">{models.error}</div>}
       </div>

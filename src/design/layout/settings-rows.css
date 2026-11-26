@@ -165,9 +165,11 @@
 .st-mdl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .st-mdl-r { display: inline-flex; align-items: center; gap: 5px; color: var(--fg-3);
   font-size: var(--d-text-xs); }
+.st-mdl-agent { font-size: var(--d-text-xs); }
 .st-models-actions { display: flex; align-items: center; gap: 10px; }
 .st-models-save { border: 1px solid var(--accent); color: var(--accent); }
 .st-mpath { color: var(--fg-4); font-size: var(--d-text-xs); overflow-wrap: anywhere; }
+.st-mnote { color: var(--fg-3); font-size: var(--d-text-xs); overflow-wrap: anywhere; }
 
 /* MCP (Settings → MCP): server editor and the project's read-only list
    (app/mcp.js, rows-mcp.jsx). */

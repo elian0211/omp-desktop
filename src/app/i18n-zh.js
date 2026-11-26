@@ -238,6 +238,14 @@ window.OMP_I18N.add("zh", {
   "models.yml does not parse: {detail}": "models.yml 无法解析：{detail}",
   "could not read models.yml": "无法读取 models.yml",
   "could not save models.yml": "无法保存 models.yml",
+  "image gen": "生图",
+  "provider-native image_generation (openai-responses)": "provider 原生 image_generation（仅 openai-responses）",
+  "image subagent": "生图子代理",
+  "writes the image_generator subagent for this model": "为该模型写入 image_generator 子代理定义",
+  "provider tools": "provider 工具",
+  "opt-in provider-native tools on an OpenAI-compatible gateway (official OpenAI has web_search by default)": "在 OpenAI 兼容中转站上显式启用 provider 原生工具（官方 OpenAI 默认已有 web_search）",
+  "image agent written: {path}": "已写入生图子代理：{path}",
+  "image agent file already exists: {path}": "生图子代理文件已存在：{path}\n覆盖它吗？",
 
   // ── Settings → MCP ──
   "MCP": "MCP",

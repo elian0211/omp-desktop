@@ -4039,6 +4039,12 @@
     setModelsConfig(profile, providers, apiKeys) {
       return _invokeResult("models_config_set", { profile, providers, apiKeys });
     },
+    /** Writes the image-generation subagent definition (`image_agent.rs`):
+     *  `{ok, value: {path, wrote}}` — `wrote: false` + `existed: true` when
+     *  the file is already there and `force` is false. */
+    writeImageAgent(profile, name, model, force) {
+      return _invokeResult("image_agent_write", { profile, name, model, force });
+    },
     /** The MCP snapshot for `profile`: the user mcp.json plus `project`'s
      *  when given (src-tauri mcp_config.rs; `env`/`headers` redacted):
      *  `{ok, value}` or `{ok: false, error}`. */

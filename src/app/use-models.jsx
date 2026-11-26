@@ -43,6 +43,21 @@ const _UM_save = async (bridge, profileId, providers, apiKeys) => {
   return !!res?.ok;
 };
 
+/** Writes the image-generation subagent definition (image_agent.rs). A
+ *  file that is already there is only replaced after the user confirms. */
+const _UM_writeImageAgent = async (bridge, profileId, model, force) => {
+  if (!bridge || !profileId) return { ok: false, error: "unavailable" };
+  const res = await bridge.writeImageAgent(profileId, "", model, force);
+  if (!res?.ok) return { ok: false, error: res?.error ?? "could not write the agent file" };
+  if (res.value?.wrote) return { ok: true, path: res.value.path };
+  const yes = window.confirm(`${OMP_TR("image agent file already exists: {path}", { path: res.value.path })}`);
+  if (!yes) return { ok: false, error: "cancelled" };
+  const again = await bridge.writeImageAgent(profileId, "", model, true);
+  return again?.ok
+    ? { ok: true, path: again.value.path }
+    : { ok: false, error: again?.error ?? "could not write the agent file" };
+};
+
 /** `useModels(bridge, profileId, active)` — `{snap, error, busy, save,
  *  refresh}` for the shared snapshot. */
 function useModels(bridge, profileId, active) {
@@ -60,6 +75,7 @@ function useModels(bridge, profileId, active) {
     error: mine ? _UM_store.error : null,
     busy: mine && _UM_store.busy,
     save: (providers, apiKeys) => _UM_save(bridge, profileId, providers, apiKeys),
+    writeImageAgent: (model, force) => _UM_writeImageAgent(bridge, profileId, model, force),
     refresh: () => _UM_ensure(bridge, profileId, true),
   };
 }

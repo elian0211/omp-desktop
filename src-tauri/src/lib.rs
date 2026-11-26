@@ -21,6 +21,7 @@ mod git;
 mod git_browser;
 mod git_watcher;
 mod goal_config;
+mod image_agent;
 mod json_store;
 mod keybindings;
 mod mcp_config;
@@ -1260,6 +1261,35 @@ async fn models_config_set(
     .await?
 }
 
+/// Writes the image-generation subagent definition for `profile` (see
+/// `image_agent`): `{path, wrote: true}`, or `{path, wrote: false,
+/// existed: true}` when the file is already there and `force` is false —
+/// the frontend confirms the overwrite and retries.
+#[tauri::command]
+async fn image_agent_write(
+    profile: Option<String>,
+    name: String,
+    model: String,
+    force: bool,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+    app: AppHandle,
+) -> Result<serde_json::Value, String> {
+    let profile = store.resolve_owned(profile)?;
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    let env_dir = std::env::var_os("PI_CODING_AGENT_DIR");
+    off_ipc(move || {
+        image_agent::write(
+            &home,
+            profile.as_deref(),
+            env_dir.as_deref(),
+            &name,
+            &model,
+            force,
+        )
+    })
+    .await?
+}
+
 /// Resolves the optional `project` argument of the MCP commands: a frontend
 /// path is canonicalised (paths to the frontend are canonical; the reverse
 /// trip must re-anchor in Rust) and must be a directory.
@@ -1950,6 +1980,7 @@ pub fn run() {
             intelligence_settings_set,
             models_config_get,
             models_config_set,
+            image_agent_write,
             mcp_config_get,
             mcp_server_set,
             mcp_server_delete,
