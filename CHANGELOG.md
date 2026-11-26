@@ -33,6 +33,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Settings → Models reads the profile's `models.yml` again: the merged `use-mcp.jsx` declared the same top-level helpers (`_UM_store`, `_UM_ensure`, …) as `use-models.jsx`, and in the shared Babel scope its copies won — the Custom providers row fetched the MCP snapshot instead of the models one and showed an empty list. The MCP hook now uses its own `_MC_*` names (as `use-intelligence.jsx`'s `_UI_*` already does), and `chrome.jsx`'s `hintFor` wrapper no longer shadows the composer's under a shared name.
 - Clicking a file in the project side's Explorer opens the tool dock's File preview (same path as a read card), instead of only the stage files-detail panel.
 - Tool calls survive a restart, a resume or frames lost in the background: reopening a session now rebuilds each tool card from omp's persisted transcript (command/path title, output summary, error flag) instead of showing only the text bubbles; live cards keep their richer frames content where both exist.
 

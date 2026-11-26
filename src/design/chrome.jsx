@@ -13,7 +13,7 @@ const { membersNewestFirst } = window.OMP_PROJECT_NAV;
 // guard and rationale as composer.jsx's copy (kept local rather than a
 // third file to import from; see composer.jsx's doc comment for why the
 // registry-not-loaded fallback can't move into keymap.js itself).
-function hintFor(actionId, fallback) {
+function _chromeHintFor(actionId, fallback) {
   return window.OMP_KEYMAP ? window.OMP_KEYMAP.hintFor(actionId) : fallback;
 }
 
@@ -101,7 +101,7 @@ function TabBar({
           {...tabClickProps(() => onSelect(t.id), () => onClose(t.id))}>
           <TabRunDot state={t.runState} />
           <span className="tab-name">{t.name}</span>
-          <button className="tab-close" title={`${OMP_TR("close")} (${hintFor("desktop.tab.close", "Ctrl+W")})`}
+          <button className="tab-close" title={`${OMP_TR("close")} (${_chromeHintFor("desktop.tab.close", "Ctrl+W")})`}
             onClick={e => { e.stopPropagation(); onClose(t.id); }}>
             <Icon name="close" size={9} />
           </button>
@@ -109,14 +109,14 @@ function TabBar({
       ))}
       {settings?.open && (
         <div className={`tab app-tab ${settings.active ? "active" : ""}`}
-          title={`${OMP_TR("settings")} (${hintFor("desktop.settings.open", "Ctrl+,")})`}
+          title={`${OMP_TR("settings")} (${_chromeHintFor("desktop.settings.open", "Ctrl+,")})`}
           {...tabClickProps(onSelectSettings, onCloseSettings)}>
           <Icon name="cog" size={12} />
           <span className="tab-name">{OMP_TR("Settings")}</span>
           {settings.changed > 0 && (
             <span className="tab-count" title={OMP_TR("{n} changed from default", { n: settings.changed })}>{settings.changed}</span>
           )}
-          <button className="tab-close" title={`${OMP_TR("close")} (${hintFor("desktop.tab.close", "Ctrl+W")})`}
+          <button className="tab-close" title={`${OMP_TR("close")} (${_chromeHintFor("desktop.tab.close", "Ctrl+W")})`}
             onClick={e => { e.stopPropagation(); onCloseSettings?.(); }}>
             <Icon name="close" size={9} />
           </button>
@@ -166,7 +166,7 @@ function VersionButton({ up, name, checkTitle, pillTitle }) {
 }
 
 function StatusBar({ ctx, todoDone, todoTotal, onTodo, updater, ompUpdater, branch, tabId, branchLocked, bridge }) {
-  const todoChord = hintFor("desktop.panel.todo", "");
+  const todoChord = _chromeHintFor("desktop.panel.todo", "");
   return (
     <div className="status">
       <span className="status-cell"><span className="dot live" /> {OMP_TR("connected")}</span>
