@@ -65,6 +65,40 @@ fn read_file(dir: &Path) -> Result<(PathBuf, Option<String>), String> {
     }
 }
 
+/// The models endpoint inputs for [`crate::model_discovery`]: the provider's
+/// `baseUrl` and its stored key (None when unset or blank). The key stays
+/// in-process — the HTTP fetch lives in `model_discovery`, the file access
+/// here.
+pub fn provider_endpoint(
+    dir: &Path,
+    provider_id: &str,
+) -> Result<(String, Option<String>), String> {
+    let (_, text) = read_file(dir)?;
+    let Some(text) = text else {
+        return Err("models.yml does not exist yet".into());
+    };
+    let doc = parse_document(&text).map_err(|e| format!("models.yml does not parse: {e}"))?;
+    let json_doc = yaml_to_json(&doc)?;
+    let provider = json_doc
+        .get("providers")
+        .ok_or("models.yml has no providers")?
+        .get(provider_id)
+        .ok_or_else(|| format!("models.yml has no provider {provider_id:?}"))?;
+    let base = provider
+        .get("baseUrl")
+        .and_then(Json::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| format!("provider {provider_id}: no \"baseUrl\" to query"))?;
+    let key = provider
+        .get("apiKey")
+        .and_then(Json::as_str)
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string);
+    Ok((base.to_string(), key))
+}
+
 fn parse_document(text: &str) -> Result<serde_yaml::Value, String> {
     serde_yaml::from_str(text).map_err(|e| e.to_string())
 }

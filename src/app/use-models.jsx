@@ -58,6 +58,13 @@ const _UM_writeImageAgent = async (bridge, profileId, model, force) => {
     : { ok: false, error: again?.error ?? "could not write the agent file" };
 };
 
+/** Fetches the model ids a provider's gateway serves (`models_discover`). */
+const _UM_discover = async (bridge, profileId, providerId) => {
+  if (!bridge || !profileId) return { ok: false, error: "unavailable" };
+  const res = await bridge.discoverModels(profileId, providerId);
+  return res?.ok ? res : { ok: false, error: res?.error ?? "could not query the gateway" };
+};
+
 /** `useModels(bridge, profileId, active)` — `{snap, error, busy, save,
  *  refresh}` for the shared snapshot. */
 function useModels(bridge, profileId, active) {
@@ -76,6 +83,7 @@ function useModels(bridge, profileId, active) {
     busy: mine && _UM_store.busy,
     save: (providers, apiKeys) => _UM_save(bridge, profileId, providers, apiKeys),
     writeImageAgent: (model, force) => _UM_writeImageAgent(bridge, profileId, model, force),
+    discover: (providerId) => _UM_discover(bridge, profileId, providerId),
     refresh: () => _UM_ensure(bridge, profileId, true),
   };
 }

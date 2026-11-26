@@ -4039,6 +4039,11 @@
     setModelsConfig(profile, providers, apiKeys) {
       return _invokeResult("models_config_set", { profile, providers, apiKeys });
     },
+    /** The model ids a provider's gateway serves (`models_discover`):
+     *  `{ok, value: string[]}` or `{ok: false, error}`. */
+    discoverModels(profile, providerId) {
+      return _invokeResult("models_discover", { profile, providerId });
+    },
     /** Writes the image-generation subagent definition (`image_agent.rs`):
      *  `{ok, value: {path, wrote}}` — `wrote: false` + `existed: true` when
      *  the file is already there and `force` is false. */

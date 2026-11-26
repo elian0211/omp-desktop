@@ -54,12 +54,64 @@ function _SM_modelRow({ model, provider, onChange, onRemove, onImageAgent, busy 
   );
 }
 
-function _SM_providerCard({ provider, onChange, onRemove, onImageAgent, busy }) {
+function _SM_keyField({ provider, onChange, busy }) {
+  // A saved key is write-only (the backend never echoes it), so the field
+  // shows a masked hint by default; the eye switches to typing a new one.
+  const [editing, setEditing] = React.useState(false);
+  const saved = provider.hasApiKey && typeof provider.apiKey !== "string";
+  if (saved && !editing) {
+    return (
+      <div className="st-mkey">
+        <span className="st-mkey-mask mono">{OMP_TR("key saved · {hint}", { hint: provider.apiKeyHint ?? "" })}</span>
+        <button type="button" className="st-ghost st-mkey-eye" title={OMP_TR("replace the key")}
+          aria-label={OMP_TR("replace the key")} disabled={busy}
+          onClick={() => setEditing(true)}>
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M12 5C6.5 5 2.4 9.2 1 12c1.4 2.8 5.5 7 11 7s9.6-4.2 11-7c-1.4-2.8-5.5-7-11-7Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="st-mkey">
+      <_SM_field type="password" mono value={provider.apiKey ?? ""} placeholder={OMP_TR("unchanged")}
+        onChange={v => onChange(v)} />
+      {saved && (
+        <button type="button" className="st-ghost st-mkey-eye" title={OMP_TR("keep the saved key")}
+          aria-label={OMP_TR("keep the saved key")} disabled={busy}
+          onClick={() => { onChange(undefined); setEditing(false); }}>
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M12 5C6.5 5 2.4 9.2 1 12c1.4 2.8 5.5 7 11 7s9.6-4.2 11-7c-1.4-2.8-5.5-7-11-7Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm4.2 3.9 1.4 1.4L20.8 17 23 19.2l-1.4 1.4L19.4 18.4 17.2 20.6l-1.4-1.4L18 17l-2.2-2.2Z" fill="currentColor" fillRule="evenodd"/>
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function _SM_providerCard({ provider, onChange, onRemove, onImageAgent, onDiscover, busy }) {
   const { SettingsSeg: Seg } = window;
+  const [pick, setPick] = React.useState(null); // null | {ids, error, busy, checked}
   const setModel = (i, m) => onChange({
     ...provider,
     models: provider.models.map((old, j) => (j === i ? m : old)),
   });
+
+  /** Queries the gateway with the *saved* key (models.yml) and opens the
+   *  checkbox list; a failure keeps the manual blank-row fallback. */
+  const fetchModels = async () => {
+    setPick({ ids: [], error: "", busy: true, checked: {} });
+    const res = await onDiscover(provider.id);
+    if (res.ok) setPick({ ids: res.value, error: "", busy: false, checked: {} });
+    else setPick({ ids: [], error: res.error, busy: false, checked: {} });
+  };
+  const addChecked = () => {
+    const existing = new Set(provider.models.map(m => m.id));
+    const add = pick.ids.filter(id => pick.checked[id] && !existing.has(id));
+    if (add.length > 0) onChange({ ...provider, models: [...provider.models, ...add.map(id => ({ id, name: id }))] });
+    setPick(null);
+  };
   return (
     <div className="st-mprv">
       <div className="st-mprv-head">
@@ -87,7 +139,7 @@ function _SM_providerCard({ provider, onChange, onRemove, onImageAgent, busy }) 
             onChange={v => onChange({ ...provider, auth: v })} />
         </label>
         <label>{OMP_TR("API key")}
-          <_SM_field type="password" mono value={provider.apiKey ?? ""} placeholder={OMP_TR("unchanged")}
+          <_SM_keyField provider={provider} busy={busy}
             onChange={v => onChange({ ...provider, apiKey: v })} />
         </label>
         {String(provider.api ?? "") === "openai-responses" && (
@@ -101,11 +153,48 @@ function _SM_providerCard({ provider, onChange, onRemove, onImageAgent, busy }) 
       </div>
       <div className="st-mmodels">
         <div className="st-mmodels-head">{OMP_TR("Models")}
+          <button type="button" className="st-ghost"
+            title={OMP_TR("queries {baseUrl}/models with the saved key — save a typed key first", { baseUrl: provider.baseUrl ?? "" })}
+            disabled={busy || !String(provider.baseUrl ?? "").trim()}
+            onClick={fetchModels}>
+            {OMP_TR("pick from gateway")}
+          </button>
           <button type="button" className="st-ghost" disabled={busy}
             onClick={() => onChange({ ...provider, models: [...provider.models, { id: "" }] })}>
             {OMP_TR("+ model")}
           </button>
         </div>
+        {pick && (
+          <div className="st-mpick">
+            {pick.busy && <span className="st-ro">{OMP_TR("querying…")}</span>}
+            {pick.error && (
+              <>
+                <span className="st-row-error">{pick.error}</span>
+                <button type="button" className="st-ghost" onClick={() => setPick(null)}>{OMP_TR("close")}</button>
+              </>
+            )}
+            {!pick.busy && !pick.error && (
+              <>
+                {pick.ids.length > 0 && (
+                  <div className="st-mpick-list">
+                    {pick.ids.map(id => (
+                      <label key={id} className="st-mdl-r">
+                        <input type="checkbox" checked={!!pick.checked[id]}
+                          onChange={e => setPick({ ...pick, checked: { ...pick.checked, [id]: e.target.checked } })} />
+                        <span className="mono">{id}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <div className="st-mpick-actions">
+                  <button type="button" className="st-ghost st-models-save" disabled={busy}
+                    onClick={addChecked}>{OMP_TR("add selected")}</button>
+                  <button type="button" className="st-ghost" onClick={() => setPick(null)}>{OMP_TR("close")}</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
         {provider.models.map((m, i) => (
           <_SM_modelRow key={i} model={m} provider={provider} busy={busy}
             onChange={m2 => setModel(i, m2)}
@@ -169,6 +258,7 @@ function _SM_ProvidersRow({ row, ctx, query }) {
           <_SM_providerCard key={i} provider={p} busy={busy}
             onChange={p2 => update(list.map((old, j) => (j === i ? p2 : old)))}
             onImageAgent={m => makeImageAgent(p, m)}
+            onDiscover={providerId => models.discover(providerId)}
             onRemove={() => update(list.filter((_, j) => j !== i))} />
         ))}
         <div className="st-models-actions">

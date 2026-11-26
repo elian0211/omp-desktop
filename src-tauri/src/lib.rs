@@ -25,8 +25,9 @@ mod image_agent;
 mod json_store;
 mod keybindings;
 mod mcp_config;
+mod model_discovery;
 mod model_usage;
-mod models_config;
+pub(crate) mod models_config;
 mod navigation_guard;
 mod omp_cli;
 mod omp_native_config;
@@ -1261,6 +1262,27 @@ async fn models_config_set(
     .await?
 }
 
+/// The model ids a provider's gateway serves (`GET {baseUrl}/models` with
+/// the provider's own key; see `model_discovery`) for the Settings →
+/// Models "pick from the gateway" flow. The key never travels back.
+#[tauri::command]
+async fn models_discover(
+    profile: Option<String>,
+    provider_id: String,
+    store: State<'_, Arc<profiles::ProfileStore>>,
+    app: AppHandle,
+) -> Result<Vec<String>, String> {
+    let profile = store.resolve_owned(profile)?;
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    let env_dir = std::env::var_os("PI_CODING_AGENT_DIR");
+    off_ipc(move || {
+        let dir = profiles::agent_dir_for(&home, profile.as_deref(), env_dir.as_deref());
+        let (base, key) = models_config::provider_endpoint(&dir, &provider_id)?;
+        model_discovery::discover(&base, key.as_deref())
+    })
+    .await?
+}
+
 /// Writes the image-generation subagent definition for `profile` (see
 /// `image_agent`): `{path, wrote: true}`, or `{path, wrote: false,
 /// existed: true}` when the file is already there and `force` is false —
@@ -1980,6 +2002,7 @@ pub fn run() {
             intelligence_settings_set,
             models_config_get,
             models_config_set,
+            models_discover,
             image_agent_write,
             mcp_config_get,
             mcp_server_set,

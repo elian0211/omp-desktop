@@ -246,6 +246,13 @@ window.OMP_I18N.add("zh", {
   "opt-in provider-native tools on an OpenAI-compatible gateway (official OpenAI has web_search by default)": "在 OpenAI 兼容中转站上显式启用 provider 原生工具（官方 OpenAI 默认已有 web_search）",
   "image agent written: {path}": "已写入生图子代理：{path}",
   "image agent file already exists: {path}": "生图子代理文件已存在：{path}\n覆盖它吗？",
+  "replace the key": "更换密钥",
+  "keep the saved key": "保留已保存的密钥",
+  "pick from gateway": "从网关获取",
+  "queries {baseUrl}/models with the saved key — save a typed key first": "用已保存的密钥请求 {baseUrl}/models（新输入的密钥需先保存才能用于查询）",
+  "querying…": "查询中…",
+  "add selected": "添加所选",
+  "could not query the gateway": "无法查询网关",
 
   // ── Settings → MCP ──
   "MCP": "MCP",
